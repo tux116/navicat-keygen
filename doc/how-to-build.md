@@ -9,6 +9,7 @@
    * `capstone`
    * `keystone`
    * `rapidjson`
+   * `openssl`
 
    If you use Ubuntu, you can install them by:
 
@@ -28,6 +29,9 @@
 
    # install rapidjson
    $ sudo apt-get install rapidjson-dev
+   
+   # install openssl
+   $ sudo apt-get install libssl-dev
    ```
 
 2. Your gcc supports C++17 feature.
