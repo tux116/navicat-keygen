@@ -1,76 +1,95 @@
 #include "CapstoneDisassembler.hpp"
 
-CapstoneDisassembler CapstoneDisassembler::Create(cs_arch ArchType, cs_mode Mode) {
-    CapstoneDisassembler NewDisassembler;
+namespace nkg {
 
-    auto err = cs_open(ArchType, Mode, NewDisassembler.pvt_Handle.GetAddress());
-    if (err != CS_ERR_OK) {
-        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-        throw nkg::CapstoneError(__FILE__, __LINE__, err, "cs_open failed.");
+    CapstoneDisassembler::CapstoneDisassembler(const CapstoneEngine& Engine) :
+        ARL::ResourceWrapper<ARL::ResourceTraits::CapstoneInsn>(cs_malloc(Engine)),
+        m_Engine(Engine),
+        m_CurrentState{},
+        m_NextState{},
+        m_lpCurrentInsn(nullptr)
+    {
+        if (IsValid() == false) {
+            throw ARL::CapstoneError(__FILE__, __LINE__, cs_errno(Engine), "cs_malloc failed.");
+        }
     }
 
-    NewDisassembler.pvt_Insn.TakeOver(cs_malloc(NewDisassembler.pvt_Handle));
-    if (NewDisassembler.pvt_Insn.IsValid() == false) {
-        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-        throw nkg::CapstoneError(__FILE__, __LINE__, cs_errno(NewDisassembler.pvt_Handle), "cs_malloc failed.");
+    CapstoneDisassembler& CapstoneDisassembler::SetContext(const CapstoneContext& Ctx) noexcept {
+        m_lpCurrentInsn = nullptr;
+
+        m_CurrentState.lpMachineCode = nullptr;
+        m_CurrentState.cbMachineCode = 0;
+        m_CurrentState.Address = 0;
+
+        m_NextState = Ctx;
+
+        return *this;
     }
 
-    return NewDisassembler;
-}
-
-void CapstoneDisassembler::Option(cs_opt_type Type, size_t Value) {
-    auto err = cs_option(pvt_Handle, Type, Value);
-    if (err != CS_ERR_OK) {
-        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-        throw nkg::CapstoneError(__FILE__, __LINE__, err, "cs_option failed.");
+    [[nodiscard]]
+    const CapstoneContext& CapstoneDisassembler::GetContext() const noexcept {
+        return m_NextState;
     }
 
-    pvt_CurrentInsn = nullptr;
+    [[nodiscard]]
+    bool CapstoneDisassembler::Next() noexcept {
+        bool bSucceed;
+        CapstoneContext backup = m_NextState;
 
-    pvt_Insn.TakeOver(cs_malloc(pvt_Handle));
-    if (pvt_Insn.IsValid() == false) {
-        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-        throw nkg::CapstoneError(__FILE__, __LINE__, cs_errno(pvt_Handle), "cs_malloc failed.");
+        bSucceed = cs_disasm_iter(m_Engine.Get(), reinterpret_cast<const uint8_t**>(&m_NextState.lpMachineCode), &m_NextState.cbMachineCode, &m_NextState.Address, Get());
+        if (bSucceed) {
+            if (m_lpCurrentInsn == nullptr) {
+                m_lpCurrentInsn = Get();
+            }
+
+            m_CurrentState = backup;
+        } else {
+            m_lpCurrentInsn = nullptr;
+        }
+
+        return bSucceed;
     }
-}
 
-void CapstoneDisassembler::SetContext(uintptr_t lpOpcode, size_t cbOpcode, uint64_t Address) noexcept {
-    pvt_CurrentCtx.pbOpcode = reinterpret_cast<const uint8_t*>(lpOpcode);
-    pvt_CurrentCtx.cbOpcode = cbOpcode;
-    pvt_CurrentCtx.Address = Address;
-    pvt_CurrentInsn = nullptr;
-}
-
-void CapstoneDisassembler::SetContext(const void* lpOpcode, size_t cbOpcode, uint64_t Address) noexcept {
-    pvt_CurrentCtx.pbOpcode = reinterpret_cast<const uint8_t*>(lpOpcode);
-    pvt_CurrentCtx.cbOpcode = cbOpcode;
-    pvt_CurrentCtx.Address = Address;
-    pvt_CurrentInsn = nullptr;
-}
-
-const CapstoneDisassembler::Context& CapstoneDisassembler::GetContext() const noexcept {
-    return pvt_CurrentCtx;
-}
-
-const cs_insn* CapstoneDisassembler::GetInstruction() const noexcept {
-    return pvt_CurrentInsn;
-}
-
-CapstoneDisassembler::Context CapstoneDisassembler::GetInstructionContext() const noexcept {
-    Context CtxOfInsn = {};
-    CtxOfInsn.pbOpcode = pvt_CurrentCtx.pbOpcode - pvt_CurrentInsn->size;
-    CtxOfInsn.cbOpcode = pvt_CurrentCtx.cbOpcode + pvt_CurrentInsn->size;
-    CtxOfInsn.Address = pvt_CurrentCtx.Address - pvt_CurrentInsn->size;
-    return CtxOfInsn;
-}
-
-bool CapstoneDisassembler::Next() noexcept {
-    bool bSucceed = cs_disasm_iter(pvt_Handle, &pvt_CurrentCtx.pbOpcode, &pvt_CurrentCtx.cbOpcode, &pvt_CurrentCtx.Address, pvt_Insn);
-    if (bSucceed) {
-        if (pvt_CurrentInsn == nullptr) pvt_CurrentInsn = pvt_Insn.Get();
-    } else {
-        pvt_CurrentInsn = nullptr;
+    [[nodiscard]]
+    const cs_insn* CapstoneDisassembler::GetInstruction() const noexcept {
+        return m_lpCurrentInsn;
     }
-    return bSucceed;
+
+    [[nodiscard]]
+    const CapstoneContext& CapstoneDisassembler::GetInstructionContext() const noexcept {
+        return m_CurrentState;
+    }
+
+    CapstoneEngine::CapstoneEngine(cs_arch ArchType, cs_mode Mode) {
+        auto err = cs_open(ArchType, Mode, GetAddressOf());
+        if (err != CS_ERR_OK) {
+            throw ARL::CapstoneError(__FILE__, __LINE__, err, "cs_open failed.");
+        }
+    }
+
+    void CapstoneEngine::Option(cs_opt_type Type, cs_opt_value Value) {
+        auto err = cs_option(Get(), Type, Value);
+        if (err != CS_ERR_OK) {
+            throw ARL::CapstoneError(__FILE__, __LINE__, err, "cs_option failed.");
+        }
+    }
+
+    const char* CapstoneEngine::GetGroupName(unsigned int group_id) const noexcept {
+        return cs_group_name(Get(), group_id);
+    }
+
+    const char* CapstoneEngine::GetInstructionName(unsigned int instruction_id) const noexcept {
+        return cs_insn_name(Get(), instruction_id);
+    }
+
+    const char* CapstoneEngine::GetRegisterName(unsigned int register_id) const noexcept {
+        return cs_reg_name(Get(), register_id);
+    }
+
+    [[nodiscard]]
+    CapstoneDisassembler CapstoneEngine::CreateDisassembler() const {
+        return CapstoneDisassembler(*this);
+    }
+
 }
 

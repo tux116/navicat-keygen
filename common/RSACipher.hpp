@@ -4,267 +4,271 @@
 #include <openssl/pem.h>
 #include <openssl/bio.h>
 #include <openssl/rsa.h>
-
 #include <string>
-
+#include "Exception.hpp"
 #include "ExceptionOpenssl.hpp"
-#include "ResourceOwned.hpp"
+#include "ResourceWrapper.hpp"
 #include "ResourceTraitsOpenssl.hpp"
 
-enum class RSAKeyType {
-    PrivateKey,
-    PublicKey
-};
+namespace nkg {
 
-enum class RSAKeyFormat {
-    PEM,
-    PKCS1
-};
+    enum class RSAKeyType {
+        PrivateKey,
+        PublicKey
+    };
 
-class RSACipher {
-private:
-    ResourceOwned<OpensslRSATraits> pvt_RsaObj;
+    enum class RSAKeyFormat {
+        PEM,
+        PKCS1
+    };
 
-    template<RSAKeyType __Type, RSAKeyFormat __Format>
-    static void pvt_WriteRSAToBIO(RSA* lpRSA, BIO* lpBIO) {
-        if constexpr (__Type == RSAKeyType::PrivateKey) {
-            if (PEM_write_bio_RSAPrivateKey(lpBIO, lpRSA, nullptr, nullptr, 0, nullptr, nullptr) == 0) {
-                // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-                throw nkg::Exception(__FILE__, __LINE__, "PEM_write_bio_RSAPrivateKey failed.");
+    class RSACipher final : private ARL::ResourceWrapper<ARL::ResourceTraits::OpensslRSA> {
+    private:
+
+        template<RSAKeyType __Type, RSAKeyFormat __Format>
+        static void _WriteRSAToBIO(RSA* lpRSA, BIO* lpBIO) {
+            if constexpr (__Type == RSAKeyType::PrivateKey) {
+                if (PEM_write_bio_RSAPrivateKey(lpBIO, lpRSA, nullptr, nullptr, 0, nullptr, nullptr) == 0) {
+                    throw ARL::Exception(__FILE__, __LINE__, "PEM_write_bio_RSAPrivateKey failed.");
+                }
             }
-        } else {
-            if constexpr (__Format == RSAKeyFormat::PEM) {
-                if (PEM_write_bio_RSA_PUBKEY(lpBIO, lpRSA) == 0) {
-                    // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-                    throw nkg::Exception(__FILE__, __LINE__, "PEM_write_bio_RSA_PUBKEY failed.");
+
+            if constexpr (__Type == RSAKeyType::PublicKey) {
+                if constexpr (__Format == RSAKeyFormat::PEM) {
+                    if (PEM_write_bio_RSA_PUBKEY(lpBIO, lpRSA) == 0) {
+                        throw ARL::Exception(__FILE__, __LINE__, "PEM_write_bio_RSA_PUBKEY failed.");
+                    }
                 }
-            } else if constexpr (__Format == RSAKeyFormat::PKCS1) {
-                if (PEM_write_bio_RSAPublicKey(lpBIO, lpRSA) == 0) {
-                    // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-                    throw nkg::Exception(__FILE__, __LINE__, "PEM_write_bio_RSAPublicKey failed.");
+
+                if constexpr (__Format == RSAKeyFormat::PKCS1) {
+                    if (PEM_write_bio_RSAPublicKey(lpBIO, lpRSA) == 0) {
+                        throw ARL::Exception(__FILE__, __LINE__, "PEM_write_bio_RSAPublicKey failed.");
+                    }
                 }
-            } else {
+
                 static_assert(__Format == RSAKeyFormat::PEM || __Format == RSAKeyFormat::PKCS1);
-                __builtin_unreachable();
+            }
+
+            static_assert(__Type == RSAKeyType::PrivateKey || __Type == RSAKeyType::PublicKey);
+        }
+
+        template<RSAKeyType __Type, RSAKeyFormat __Format>
+        [[nodiscard]]
+        static RSA* _ReadRSAFromBIO(BIO* lpBIO) {
+            RSA* lpRSA;
+
+            if constexpr (__Type == RSAKeyType::PrivateKey) {
+                lpRSA = PEM_read_bio_RSAPrivateKey(lpBIO, nullptr, nullptr, nullptr);
+                if (lpRSA == nullptr) {
+                    throw ARL::Exception(__FILE__, __LINE__, "PEM_read_bio_RSAPrivateKey failed.")
+                        .PushHint("Are you sure that you DO provide a valid RSA private key file?");
+                }
+            }
+
+            if constexpr (__Type == RSAKeyType::PublicKey) {
+                if constexpr (__Format == RSAKeyFormat::PEM) {
+                    lpRSA = PEM_read_bio_RSA_PUBKEY(lpBIO, nullptr, nullptr, nullptr);
+                    if (lpRSA == nullptr) {
+                        throw ARL::Exception(__FILE__, __LINE__, "PEM_read_bio_RSA_PUBKEY failed.")
+                            .PushHint("Are you sure that you DO provide a valid RSA public key file with PEM format?");
+                    }
+                }
+
+                if constexpr (__Format == RSAKeyFormat::PKCS1) {
+                    lpRSA = PEM_read_bio_RSAPublicKey(lpBIO, nullptr, nullptr, nullptr);
+                    if (lpRSA == nullptr) {
+                        throw ARL::Exception(__FILE__, __LINE__, "PEM_read_bio_RSAPublicKey failed.")
+                            .PushHint("Are you sure that you DO provide a valid RSA public key file with PKCS1 format?");
+                    }
+                }
+
+                static_assert(__Format == RSAKeyFormat::PEM || __Format == RSAKeyFormat::PKCS1);
+            }
+
+            static_assert(__Type == RSAKeyType::PrivateKey || __Type == RSAKeyType::PublicKey);
+
+            return lpRSA;
+        }
+
+    public:
+
+        RSACipher() : ARL::ResourceWrapper<ARL::ResourceTraits::OpensslRSA>(RSA_new()) {
+            if (IsValid() == false) {
+                throw ARL::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_new failed.");
             }
         }
-    }
 
-    template<RSAKeyType _Type, RSAKeyFormat _Format>
-    [[nodiscard]]
-    static RSA* pvt_ReadRSAFromBIO(BIO* lpBIO) {
-        RSA* lpRSA;
-
-        if constexpr (_Type == RSAKeyType::PrivateKey) {
-            lpRSA = PEM_read_bio_RSAPrivateKey(lpBIO, nullptr, nullptr, nullptr);
-            if (lpRSA == nullptr) {
-                // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-                throw nkg::Exception(__FILE__, __LINE__, "PEM_read_bio_RSAPrivateKey failed.");
+        [[nodiscard]]
+        size_t Bits() const {
+#if (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10000000     // openssl 1.0.x
+            if (Get()->n == nullptr) {
+                throw ARL::Exception(__FILE__, __LINE__, "RSA modulus has not been set.");
+            } else {
+                return BN_num_bits(Get()->n);
             }
-        } else {
-            if constexpr (_Format == RSAKeyFormat::PEM) {
-                lpRSA = PEM_read_bio_RSA_PUBKEY(lpBIO, nullptr, nullptr, nullptr);
-                if (lpRSA == nullptr) {
-                    // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-                    throw nkg::Exception(__FILE__, __LINE__, " -> PEM_read_bio_RSA_PUBKEY failed.");
-                }
-            } else if constexpr (_Format == RSAKeyFormat::PKCS1) {
-                lpRSA = PEM_read_bio_RSAPublicKey(lpBIO, nullptr, nullptr, nullptr);
-                if (lpRSA == nullptr) {
-                    // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-                    throw nkg::Exception(__FILE__, __LINE__, "PEM_read_bio_RSAPublicKey failed.");
+#elif (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10100000     // openssl 1.1.x
+            return RSA_bits(Get());
+#else
+#error "RSACipher.hpp: unexpected OpenSSL version."
+#endif
+        }
+
+        void GenerateKey(int bits, unsigned int e = RSA_F4) {
+            ARL::ResourceWrapper bn_e{ ARL::ResourceTraits::OpensslBIGNUM{} };
+
+            bn_e.TakeOver(BN_new());
+            if (bn_e.IsValid() == false) {
+                throw ARL::OpensslError(__FILE__, __LINE__, ERR_get_error(), "BN_new failed.");
+            }
+
+            if (!BN_set_word(bn_e, e)) {
+                throw ARL::Exception(__FILE__, __LINE__, "BN_set_word failed.");
+            }
+
+            if (!RSA_generate_key_ex(Get(), bits, bn_e, nullptr)) {
+                throw ARL::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_generate_key_ex failed.");
+            }
+        }
+
+        template<RSAKeyType __Type, RSAKeyFormat __Format>
+        void ExportKeyToFile(std::string_view FileName) const {
+            ARL::ResourceWrapper KeyFile{ ARL::ResourceTraits::OpensslBIO{} };
+
+            KeyFile.TakeOver(BIO_new_file(FileName.data(), "w"));
+            if (KeyFile.IsValid() == false) {
+                throw ARL::Exception(__FILE__, __LINE__, "BIO_new_file failed.");
+            }
+
+            _WriteRSAToBIO<__Type, __Format>(Get(), KeyFile);
+        }
+
+        template<RSAKeyType __Type, RSAKeyFormat __Format>
+        [[nodiscard]]
+        std::string ExportKeyString() const {
+            ARL::ResourceWrapper TempMemory{ ARL::ResourceTraits::OpensslBIO{} };
+            const char* lpsz = nullptr;
+
+            TempMemory.TakeOver(BIO_new(BIO_s_mem()));
+            if (TempMemory.IsValid() == false) {
+                throw ARL::Exception(__FILE__, __LINE__, "BIO_new failed.");
+            }
+
+            _WriteRSAToBIO<__Type, __Format>(Get(), TempMemory);
+
+            auto l = BIO_get_mem_data(TempMemory.Get(), &lpsz);
+
+            std::string KeyString(lpsz, l);
+            while (KeyString.back() == '\n' || KeyString.back() == '\r') {
+                KeyString.pop_back();
+            }
+
+            return KeyString;
+        }
+
+        template<RSAKeyType __Type, RSAKeyFormat __Format>
+        void ImportKeyFromFile(std::string_view FileName) {
+            ARL::ResourceWrapper KeyFile{ ARL::ResourceTraits::OpensslBIO{} };
+
+            KeyFile.TakeOver(BIO_new_file(FileName.data(), "r"));
+            if (KeyFile.IsValid() == false) {
+                throw ARL::Exception(__FILE__, __LINE__, "BIO_new_file failed.");
+            }
+
+            ReleaseAndTakeOver(_ReadRSAFromBIO<__Type, __Format>(KeyFile));
+        }
+
+        template<RSAKeyType __Type, RSAKeyFormat __Format>
+        void ImportKeyString(std::string_view KeyString) {
+            ARL::ResourceWrapper TempMemory{ ARL::ResourceTraits::OpensslBIO{} };
+
+            TempMemory.TakeOver(BIO_new(BIO_s_mem()));
+            if (TempMemory.IsValid() == false) {
+                throw ARL::Exception(__FILE__, __LINE__, "BIO_new failed.");
+            }
+
+            if (BIO_puts(TempMemory.Get(), KeyString.data()) <= 0) {
+                throw ARL::Exception(__FILE__, __LINE__, "BIO_puts failed.");
+            }
+
+            TakeOver(_ReadRSAFromBIO<__Type, __Format>(TempMemory));
+        }
+
+        template<RSAKeyType __Type = RSAKeyType::PublicKey>
+        size_t Encrypt(const void* lpFrom, size_t cbFrom, void* lpTo, int Padding) const {
+            int BytesWritten;
+
+            if (cbFrom > static_cast<size_t>(INT_MAX)) {
+                throw ARL::Exception(__FILE__, __LINE__, "Length overflowed.");
+            }
+
+            if constexpr (__Type == RSAKeyType::PrivateKey) {
+                BytesWritten = RSA_private_encrypt(
+                    static_cast<int>(cbFrom),
+                    reinterpret_cast<const unsigned char*>(lpFrom),
+                    reinterpret_cast<unsigned char*>(lpTo),
+                    Get(),
+                    Padding
+                );
+
+                if (BytesWritten == -1) {
+                    throw ARL::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_private_encrypt failed.");
                 }
             } else {
-                static_assert(_Format == RSAKeyFormat::PEM || _Format == RSAKeyFormat::PKCS1);
-                __builtin_unreachable();
+                BytesWritten = RSA_public_encrypt(
+                    static_cast<int>(cbFrom),
+                    reinterpret_cast<const unsigned char*>(lpFrom),
+                    reinterpret_cast<unsigned char*>(lpTo),
+                    Get(),
+                    Padding
+                );
+
+                if (BytesWritten == -1) {
+                    throw ARL::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_public_encrypt failed.");
+                }
             }
+
+            return BytesWritten;
         }
 
-        return lpRSA;
-    }
+        template<RSAKeyType __Type = RSAKeyType::PrivateKey>
+        size_t Decrypt(const void* lpFrom, size_t cbFrom, void* lpTo, int Padding) const {
+            int BytesWritten;
 
-public:
-
-    RSACipher() : pvt_RsaObj(OpensslRSATraits{}, RSA_new()) {
-        if (pvt_RsaObj.IsValid() == false) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_new failed.");
-        }
-    }
-
-    [[nodiscard]]
-    size_t Bits() const {
-#if (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10000000     // openssl 1.0.x
-        if (pvt_RsaObj->n == nullptr) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "RSA modulus has not been set.");
-        } else {
-            return BN_num_bits(pvt_RsaObj->n);
-        }
-#elif (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10100000     // openssl 1.1.x
-        return RSA_bits(pvt_RsaObj);
-#else
-#error "Unexpected openssl version!"
-#endif
-    }
-
-    void GenerateKey(int bits, unsigned int e = RSA_F4) {
-        ResourceOwned bn_e(OpensslBNTraits{}, BN_new());
-
-        if (bn_e.IsValid() == false) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::OpensslError(__FILE__, __LINE__, ERR_get_error(), "BN_new failed.");
-        }
-
-        if (!BN_set_word(bn_e, e)) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "BN_set_word failed.");
-        }
-
-        if (!RSA_generate_key_ex(pvt_RsaObj, bits, bn_e, nullptr)) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_generate_key_ex failed.");
-        }
-    }
-
-    template<RSAKeyType __Type, RSAKeyFormat __Format>
-    void ExportKeyToFile(const std::string& FileName) const {
-        ResourceOwned BioFile(OpensslBIOTraits{}, BIO_new_file(FileName.c_str(), "w"));
-
-        if (BioFile.IsValid() == false) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "BIO_new_file failed.");
-        }
-
-        pvt_WriteRSAToBIO<__Type, __Format>(pvt_RsaObj, BioFile);
-    }
-
-    template<RSAKeyType __Type, RSAKeyFormat __Format>
-    [[nodiscard]]
-    std::string ExportKeyString() const {
-        ResourceOwned BioMemory(OpensslBIOTraits{}, BIO_new(BIO_s_mem()));
-        long StringLength;
-        const char* StringChars = nullptr;
-
-        if (BioMemory.IsValid() == false) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "BIO_new failed.");
-        }
-
-        pvt_WriteRSAToBIO<__Type, __Format>(pvt_RsaObj, BioMemory);
-
-        StringLength = BIO_get_mem_data(BioMemory, &StringChars);
-
-        return std::string(StringChars, StringLength);
-    }
-
-    template<RSAKeyType __Type, RSAKeyFormat __Format>
-    void ImportKeyFromFile(const std::string& FileName) {
-        ResourceOwned BioFile(OpensslBIOTraits{}, BIO_new_file(FileName.c_str(), "r"));
-
-        if (BioFile.IsValid() == false) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "BIO_new_file failed.");
-        }
-
-        pvt_RsaObj.TakeOver(pvt_ReadRSAFromBIO<__Type, __Format>(BioFile));
-    }
-
-    template<RSAKeyType __Type, RSAKeyFormat __Format>
-    void ImportKeyString(const std::string& KeyString) {
-        ResourceOwned BioMemory(OpensslBIOTraits{}, BIO_new(BIO_s_mem()));
-        RSA* NewRsaObj;
-
-        if (BioMemory.IsValid() == false) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "BIO_new failed.");
-        }
-
-        if (BIO_puts(BioMemory, KeyString.c_str()) <= 0) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "BIO_puts failed.");
-        }
-
-        pvt_RsaObj.TakeOver(pvt_ReadRSAFromBIO<__Type, __Format>(BioMemory));
-    }
-
-    template<RSAKeyType __Type = RSAKeyType::PublicKey>
-    size_t Encrypt(const void* lpFrom, size_t cbFrom, void* lpTo, int Padding) const {
-        int BytesWritten;
-
-        if (cbFrom > INT_MAX) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived lpFrom std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "Length overflowed.");
-        }
-
-        if constexpr (__Type == RSAKeyType::PrivateKey) {
-            BytesWritten = RSA_private_encrypt(
-                static_cast<int>(cbFrom),
-                reinterpret_cast<const unsigned char*>(lpFrom),
-                reinterpret_cast<unsigned char*>(lpTo),
-                pvt_RsaObj,
-                Padding
-            );
-
-            if (BytesWritten == -1) {
-                // NOLINTNEXTLINE: allow exceptions that is not derived lpFrom std::exception
-                throw nkg::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_private_encrypt failed.");
+            if (cbFrom > static_cast<size_t>(INT_MAX)) {
+                throw ARL::Exception(__FILE__, __LINE__, "Length overflowed.");
             }
-        } else {
-            BytesWritten = RSA_public_encrypt(
-                static_cast<int>(cbFrom),
-                reinterpret_cast<const unsigned char*>(lpFrom),
-                reinterpret_cast<unsigned char*>(lpTo),
-                pvt_RsaObj,
-                Padding
-            );
 
-            if (BytesWritten == -1) {
-                // NOLINTNEXTLINE: allow exceptions that is not derived lpFrom std::exception
-                throw nkg::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_public_encrypt failed.");
+            if constexpr (__Type == RSAKeyType::PrivateKey) {
+                BytesWritten = RSA_private_decrypt(
+                    static_cast<int>(cbFrom),
+                    reinterpret_cast<const unsigned char*>(lpFrom),
+                    reinterpret_cast<unsigned char*>(lpTo),
+                    Get(),
+                    Padding
+                );
+
+                if (BytesWritten == -1) {
+                    throw ARL::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_private_decrypt failed.")
+                        .PushHint("Are your sure you DO provide a correct private key?");
+                }
+            } else {
+                BytesWritten = RSA_public_decrypt(
+                    static_cast<int>(cbFrom),
+                    reinterpret_cast<const unsigned char*>(lpFrom),
+                    reinterpret_cast<unsigned char*>(lpTo),
+                    Get(),
+                    Padding
+                );
+
+                if (BytesWritten == -1) {
+                    throw ARL::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_public_decrypt failed.")
+                        .PushHint("Are your sure you DO provide a correct public key?");
+                }
             }
+
+            return BytesWritten;
         }
+    };
 
-        return BytesWritten;
-    }
+}
 
-    template<RSAKeyType __Type = RSAKeyType::PrivateKey>
-    size_t Decrypt(const void* lpFrom, int cbFrom, void* lpTo, int Padding) const {
-        int BytesWritten;
-
-        if (cbFrom > INT_MAX) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived lpFrom std::exception
-            throw nkg::Exception(__FILE__, __LINE__, "Length overflowed.");
-        }
-
-        if constexpr (__Type == RSAKeyType::PrivateKey) {
-            BytesWritten = RSA_private_decrypt(
-                cbFrom,
-                reinterpret_cast<const unsigned char*>(lpFrom),
-                reinterpret_cast<unsigned char*>(lpTo),
-                pvt_RsaObj,
-                Padding
-            );
-
-            if (BytesWritten == -1) {
-                // NOLINTNEXTLINE: allow exceptions that is not derived lpFrom std::exception
-                throw nkg::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_private_decrypt failed.");
-            }
-        } else {
-            BytesWritten = RSA_public_decrypt(
-                cbFrom,
-                reinterpret_cast<const unsigned char*>(lpFrom),
-                reinterpret_cast<unsigned char*>(lpTo),
-                pvt_RsaObj,
-                Padding
-            );
-
-            if (BytesWritten == -1) {
-                // NOLINTNEXTLINE: allow exceptions that is not derived lpFrom std::exception
-                throw nkg::OpensslError(__FILE__, __LINE__, ERR_get_error(), "RSA_public_decrypt failed.");
-            }
-        }
-
-        return BytesWritten;
-    }
-};

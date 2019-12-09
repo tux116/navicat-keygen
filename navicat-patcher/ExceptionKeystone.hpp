@@ -1,19 +1,20 @@
 #pragma once
-#include "../common/Exception.hpp"
 #include <keystone/keystone.h>
+#include "Exception.hpp"
 
-namespace nkg {
+namespace ARL {
 
     class KeystoneError final : public Exception {
     private:
 
-        ks_err pvt_ErrorCode;
+        ks_err m_ErrorCode;
 
     public:
 
-        KeystoneError(const char* File, unsigned Line, ks_err ErrorCode, const char* Message) noexcept :
-            Exception(File, Line, Message),
-            pvt_ErrorCode(ErrorCode) {}
+        template<typename... __ArgTypes>
+        KeystoneError(const char* SourceFile, size_t SourceLine, ks_err ErrorCode, const char* Format, __ArgTypes&&... Args) noexcept :
+            Exception(SourceFile, SourceLine, Format, std::forward<__ArgTypes>(Args)...),
+            m_ErrorCode(ErrorCode) {}
 
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
@@ -24,13 +25,13 @@ namespace nkg {
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
         virtual intptr_t ErrorCode() const noexcept override {
-            return pvt_ErrorCode;
+            return m_ErrorCode;
         }
 
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
         virtual const char* ErrorString() const noexcept override {
-            return ks_strerror(pvt_ErrorCode);
+            return ks_strerror(m_ErrorCode);
         }
     };
 

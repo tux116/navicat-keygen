@@ -2,63 +2,67 @@
 #include <openssl/bio.h>
 #include <openssl/rsa.h>
 
-struct OpensslBIOTraits {
-    using HandleType = BIO*;
+namespace ARL::ResourceTraits {
 
-    static inline const HandleType InvalidValue = nullptr;
+    struct OpensslBIO {
+        using HandleType = BIO*;
 
-    [[nodiscard]]
-    static bool IsValid(const HandleType& Handle) noexcept {
-        return Handle != InvalidValue;
-    }
+        static inline const HandleType InvalidValue = nullptr;
 
-    static void Releasor(const HandleType& Handle) noexcept {
-        BIO_free(Handle);
-    }
-};
+        [[nodiscard]]
+        static bool IsValid(const HandleType& Handle) noexcept {
+            return Handle != InvalidValue;
+        }
 
-struct OpensslBIOChainTraits {
-    using HandleType = BIO*;
+        static void Release(const HandleType& Handle) noexcept {
+            BIO_free(Handle);
+        }
+    };
 
-    static inline const HandleType InvalidValue = nullptr;
+    struct OpensslBIOChain {
+        using HandleType = BIO*;
 
-    [[nodiscard]]
-    static bool IsValid(const HandleType& Handle) noexcept {
-        return Handle != InvalidValue;
-    }
+        static inline const HandleType InvalidValue = nullptr;
 
-    static void Releasor(const HandleType& Handle) noexcept {
-        BIO_free_all(Handle);
-    }
-};
+        [[nodiscard]]
+        static bool IsValid(const HandleType& Handle) noexcept {
+            return Handle != InvalidValue;
+        }
 
-struct OpensslBNTraits {
-    using HandleType = BIGNUM*;
+        static void Release(const HandleType& Handle) noexcept {
+            BIO_free_all(Handle);
+        }
+    };
 
-    static inline const HandleType InvalidValue = nullptr;
+    struct OpensslBIGNUM {
+        using HandleType = BIGNUM*;
 
-    [[nodiscard]]
-    static bool IsValid(const HandleType& Handle) noexcept {
-        return Handle != InvalidValue;
-    }
+        static inline const HandleType InvalidValue = nullptr;
 
-    static void Releasor(const HandleType& Handle) noexcept {
-        BN_free(Handle);
-    }
-};
+        [[nodiscard]]
+        static bool IsValid(const HandleType& Handle) noexcept {
+            return Handle != InvalidValue;
+        }
 
-struct OpensslRSATraits {
-    using HandleType = RSA*;
+        static void Release(const HandleType& Handle) noexcept {
+            BN_free(Handle);
+        }
+    };
 
-    static inline const HandleType InvalidValue = nullptr;
+    struct OpensslRSA {
+        using HandleType = RSA*;
 
-    [[nodiscard]]
-    static bool IsValid(const HandleType& Handle) noexcept {
-        return Handle != InvalidValue;
-    }
+        static inline const HandleType InvalidValue = nullptr;
 
-    static void Releasor(const HandleType& Handle) noexcept {
-        RSA_free(Handle);
-    }
-};
+        [[nodiscard]]
+        static bool IsValid(const HandleType& Handle) noexcept {
+            return Handle != InvalidValue;
+        }
+
+        static void Release(const HandleType& Handle) noexcept {
+            RSA_free(Handle);
+        }
+    };
+
+}
 

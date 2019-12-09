@@ -1,19 +1,20 @@
 #pragma once
-#include "../common/Exception.hpp"
 #include <capstone/capstone.h>
+#include "Exception.hpp"
 
-namespace nkg {
+namespace ARL {
 
     class CapstoneError final : public Exception {
     private:
 
-        cs_err pvt_ErrorCode;
+        cs_err m_ErrorCode;
 
     public:
 
-        CapstoneError(const char* File, unsigned Line, cs_err ErrorCode, const char* Message) noexcept :
-            Exception(File, Line, Message),
-            pvt_ErrorCode(ErrorCode) {}
+        template<typename... __ArgTypes>
+        CapstoneError(const char* SourceFile, size_t SourceLine, cs_err ErrorCode, const char* Format, __ArgTypes&&... Args) noexcept :
+            Exception(SourceFile, SourceLine, Format, std::forward<__ArgTypes>(Args)...),
+            m_ErrorCode(ErrorCode) {}
 
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
@@ -24,13 +25,13 @@ namespace nkg {
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
         virtual intptr_t ErrorCode() const noexcept override {
-            return pvt_ErrorCode;
+            return m_ErrorCode;
         }
 
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
         virtual const char* ErrorString() const noexcept override {
-            return cs_strerror(pvt_ErrorCode);
+            return cs_strerror(m_ErrorCode);
         }
     };
 

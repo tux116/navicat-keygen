@@ -1,49 +1,63 @@
 #pragma once
 #include <capstone/capstone.h>
-#include "../common/ResourceOwned.hpp"
+#include "ExceptionCapstone.hpp"
+#include "ResourceWrapper.hpp"
 #include "ResourceTraitsCapstone.hpp"
 
-class CapstoneDisassembler {
-public:
+namespace nkg {
 
-    struct Context {
-        const uint8_t*  pbOpcode;
-        size_t          cbOpcode;
-        uint64_t        Address;
+    struct CapstoneContext {
+        const void* lpMachineCode;
+        size_t      cbMachineCode;
+        uint64_t    Address;
     };
 
-private:
+    class CapstoneEngine;
 
-    ResourceOwned<CapstoneHandleTraits> pvt_Handle;
-    ResourceOwned<CapstoneInsnTraits>   pvt_Insn;
-    Context                             pvt_CurrentCtx;
-    cs_insn*                            pvt_CurrentInsn;
+    class CapstoneDisassembler : private ARL::ResourceWrapper<ARL::ResourceTraits::CapstoneInsn> {
+        friend class CapstoneEngine;
+    private:
 
-    CapstoneDisassembler() noexcept :
-        pvt_Handle(CapstoneHandleTraits{}),
-        pvt_Insn(CapstoneInsnTraits{}),
-        pvt_CurrentCtx{},
-        pvt_CurrentInsn(nullptr) {}
-public:
+        const CapstoneEngine&   m_Engine;
+        CapstoneContext         m_CurrentState;
+        CapstoneContext         m_NextState;
+        cs_insn*                m_lpCurrentInsn;
 
-    [[nodiscard]]
-    static CapstoneDisassembler Create(cs_arch ArchType, cs_mode Mode);
+        CapstoneDisassembler(const CapstoneEngine& Engine);
 
-    void Option(cs_opt_type Type, size_t Value);
+    public:
 
-    void SetContext(uintptr_t lpOpcode, size_t cbOpcode, uint64_t Address = 0) noexcept ;
+        CapstoneDisassembler& SetContext(const CapstoneContext& Ctx) noexcept;
 
-    void SetContext(const void* lpOpcode, size_t cbOpcode, uint64_t Address = 0) noexcept;
+        [[nodiscard]]
+        const CapstoneContext& GetContext() const noexcept;
 
-    [[nodiscard]]
-    const Context& GetContext() const noexcept;
+        [[nodiscard]]
+        bool Next() noexcept;
 
-    [[nodiscard]]
-    const cs_insn* GetInstruction() const noexcept;
+        [[nodiscard]]
+        const cs_insn* GetInstruction() const noexcept;
 
-    [[nodiscard]]
-    Context GetInstructionContext() const noexcept;
+        [[nodiscard]]
+        const CapstoneContext& GetInstructionContext() const noexcept;
+    };
 
-    [[nodiscard]]
-    bool Next() noexcept;
-};
+    class CapstoneEngine : private ARL::ResourceWrapper<ARL::ResourceTraits::CapstoneHandle> {
+        friend class CapstoneDisassembler;
+    public:
+
+        CapstoneEngine(cs_arch ArchType, cs_mode Mode);
+
+        void Option(cs_opt_type Type, cs_opt_value Value);
+
+        const char* GetGroupName(unsigned int group_id) const noexcept;
+
+        const char* GetInstructionName(unsigned int instruction_id) const noexcept;
+
+        const char* GetRegisterName(unsigned int register_id) const noexcept;
+
+        [[nodiscard]]
+        CapstoneDisassembler CreateDisassembler() const;
+    };
+
+}

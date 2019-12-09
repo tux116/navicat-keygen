@@ -2,37 +2,39 @@
 #include <capstone/capstone.h>
 #include "ExceptionCapstone.hpp"
 
-struct CapstoneHandleTraits {
-    using HandleType = csh;
+namespace ARL::ResourceTraits {
 
-    static inline const HandleType InvalidValue = 0;
+    struct CapstoneHandle {
+        using HandleType = csh;
 
-    [[nodiscard]]
-    static bool IsValid(const HandleType& Handle) noexcept {
-        return Handle != InvalidValue;
-    }
+        static inline const HandleType InvalidValue = 0;
 
-    static void Releasor(HandleType& Handle) {
-        auto err = cs_close(&Handle);
-        if (err != CS_ERR_OK) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::CapstoneError(__FILE__, __LINE__, err, "ks_close failed.");
+        [[nodiscard]]
+        static bool IsValid(const HandleType& Handle) noexcept {
+            return Handle != InvalidValue;
         }
-    }
-};
 
-struct CapstoneInsnTraits {
-    using HandleType = cs_insn*;
+        static void Release(HandleType& Handle) {
+            if (auto err = cs_close(&Handle); err != CS_ERR_OK) {
+                throw ARL::CapstoneError(__FILE__, __LINE__, err, "ks_close failed.");
+            }
+        }
+    };
 
-    static inline const HandleType InvalidValue = nullptr;
+    struct CapstoneInsn {
+        using HandleType = cs_insn*;
 
-    [[nodiscard]]
-    static bool IsValid(const HandleType& Handle) noexcept {
-        return Handle != InvalidValue;
-    }
+        static inline const HandleType InvalidValue = nullptr;
 
-    static void Releasor(const HandleType& Handle) noexcept {
-        cs_free(Handle, 1);
-    }
-};
+        [[nodiscard]]
+        static bool IsValid(const HandleType& Handle) noexcept {
+            return Handle != InvalidValue;
+        }
+
+        static void Release(const HandleType& Handle) noexcept {
+            cs_free(Handle, 1);
+        }
+    };
+
+}
 

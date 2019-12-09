@@ -1,19 +1,20 @@
 #pragma once
-#include <openssl/err.h>
 #include "Exception.hpp"
+#include <openssl/err.h>
 
-namespace nkg {
+namespace ARL {
 
     class OpensslError final : public Exception {
     private:
 
-        unsigned long pvt_ErrorCode;
+        unsigned long m_ErrorCode;
 
     public:
 
-        OpensslError(const char* File, unsigned Line, unsigned long ErrorCode, const char* Message) noexcept :
-            Exception(File, Line, Message),
-            pvt_ErrorCode(ErrorCode) {}
+        template<typename... __ArgTypes>
+        OpensslError(const char* SourceFile, size_t SourceLine, unsigned long ErrorCode, const char* Format, __ArgTypes&&... Args) noexcept :
+            Exception(SourceFile, SourceLine, Format, std::forward<__ArgTypes>(Args)...),
+            m_ErrorCode(ErrorCode) {}
 
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
@@ -24,14 +25,18 @@ namespace nkg {
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
         virtual intptr_t ErrorCode() const noexcept override {
-            return pvt_ErrorCode;
+            return m_ErrorCode;
         }
 
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
         virtual const char* ErrorString() const noexcept override {
-            ERR_load_crypto_strings();
-            return ERR_reason_error_string(pvt_ErrorCode);
+            static bool loaded = false;
+            if (loaded == false) {
+                ERR_load_crypto_strings();
+                loaded = true;
+            }
+            return ERR_reason_error_string(m_ErrorCode);
         }
     };
 

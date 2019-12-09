@@ -1,36 +1,101 @@
 #pragma once
-#include <stddef.h> // NOLINT
-#include <stdint.h> // NOLINT
+#include <stddef.h>
+#include <stdint.h>
+#include <exception>
+#include <string>
+#include <vector>
+#include <utility>
 
-namespace nkg {
+namespace ARL {
 
-    class Exception {
+    class Exception : public std::exception {
     private:
 
-        const char* pvt_File;
-        const char* pvt_Message;
-        size_t      pvt_Line;
+        const char*  m_SourceFile;
+        const size_t m_SourceLine;
+        std::string  m_Message;
+        std::vector<std::string> m_Hints;
 
     public:
 
-        Exception(const char* File, size_t Line, const char* Message) noexcept :
-            pvt_File(File),
-            pvt_Message(Message),
-            pvt_Line(Line) {}
+        template<typename... __ArgTypes>
+        Exception(const char* SourceFile, size_t SourceLine, const char* Format, __ArgTypes&&... Args) noexcept :
+            m_SourceFile(SourceFile),
+            m_SourceLine(SourceLine)
+        {
+            if constexpr (sizeof...(Args) == 0) {
+                m_Message.assign(Format);
+            } else {
+                int l;
+                
+                l = snprintf(nullptr, 0, Format, std::forward<__ArgTypes>(Args)...);
+                if (l < 0) {
+                    std::terminate();
+                }
 
-        [[nodiscard]]
-        const char* File() const noexcept {
-            return pvt_File;
+                m_Message.resize(l + 1);
+
+                l = snprintf(m_Message.data(), m_Message.length(), Format, std::forward<__ArgTypes>(Args)...);
+                if (l < 0) {
+                    std::terminate();
+                }
+
+                while (m_Message.back() == '\x00') {
+                    m_Message.pop_back();
+                }
+            }
         }
 
         [[nodiscard]]
-        size_t Line() const noexcept {
-            return pvt_Line;
+        auto ExceptionFile() const noexcept {
+            return m_SourceFile;
+        }
+        
+        [[nodiscard]]
+        auto ExceptionLine() const noexcept {
+            return m_SourceLine;
         }
 
         [[nodiscard]]
-        const char* Message() const noexcept {
-            return pvt_Message;
+        auto ExceptionMessage() const noexcept {
+            return m_Message.c_str();
+        }
+
+        template<typename __HintType>
+        auto& PushHint(__HintType&& Hint) noexcept {    // if an exception is thrown, just suppress and terminate.
+            m_Hints.emplace_back(std::forward<__HintType>(Hint));
+            return *this;
+        }
+
+        template<typename... __ArgTypes>
+        auto& PushFormatHint(const char* Format, __ArgTypes&&... Args) noexcept {    // if an exception is thrown, just suppress and terminate.
+            int l;
+            std::string s;
+
+            l = snprintf(nullptr, 0, Format, std::forward<__ArgTypes>(Args)...);
+            if (l < 0) {
+                std::terminate();
+            }
+
+            s.resize(l + 1);
+
+            l = snprintf(s.data(), s.length(), Format, std::forward<__ArgTypes>(Args)...);
+            if (l < 0) {
+                std::terminate();
+            }
+
+            while (s.back() == '\x00') {
+                s.pop_back();
+            }
+
+            m_Hints.emplace_back(std::move(s));
+
+            return *this;
+        }
+
+        [[nodiscard]]
+        const auto& Hints() const noexcept {
+            return m_Hints;
         }
 
         [[nodiscard]]
@@ -46,6 +111,12 @@ namespace nkg {
         [[nodiscard]]
         virtual const char* ErrorString() const noexcept {
             return nullptr;
+        }
+
+        [[nodiscard]]
+        // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
+        virtual const char* what() const noexcept override {
+            return ExceptionMessage();
         }
     };
 

@@ -1,19 +1,20 @@
 #pragma once
 #include "Exception.hpp"
-#include <string.h> // NOLINT
+#include <string.h>
 
-namespace nkg {
+namespace ARL {
 
     class SystemError final : public Exception {
     private:
 
-        int pvt_ErrorCode;
+        int m_ErrorCode;
 
     public:
 
-        SystemError(const char* File, unsigned Line, int ErrorCode, const char* Message) noexcept :
-            Exception(File, Line, Message),
-            pvt_ErrorCode(ErrorCode) {}
+        template<typename... __ArgTypes>
+        SystemError(const char* SourceFile, size_t SourceLine, int ErrorCode, const char* Format, __ArgTypes&&... Args) noexcept :
+            Exception(SourceFile, SourceLine, Format, std::forward<__ArgTypes>(Args)...),
+            m_ErrorCode(ErrorCode) {}
 
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
@@ -24,14 +25,15 @@ namespace nkg {
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
         virtual intptr_t ErrorCode() const noexcept override {
-            return pvt_ErrorCode;
+            return m_ErrorCode;
         }
 
         [[nodiscard]]
         // NOLINTNEXTLINE: mark "virtual" explicitly for more readability
         virtual const char* ErrorString() const noexcept override {
-            return strerror(pvt_ErrorCode);
+            return strerror(m_ErrorCode);
         }
     };
 
 }
+

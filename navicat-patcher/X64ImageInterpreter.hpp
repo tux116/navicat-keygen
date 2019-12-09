@@ -1,199 +1,222 @@
 #pragma once
-#include <string.h> // NOLINT
 #include <mach-o/loader.h>
 #include <mach-o/nlist.h>
+#include <string.h>
 #include <vector>
 #include <map>
-#include "../common/Exception.hpp"
+#include "Exception.hpp"
+#include "ExceptionGeneric.hpp"
+#include "MemoryAccess.hpp"
 
-class X64ImageInterpreter {
-public:
-    static constexpr uint64_t InvalidAddress = static_cast<uint64_t>(-1);
-    static constexpr uint32_t InvalidOffset = static_cast<uint32_t>(-1);
-private:
+namespace nkg {
 
-    mach_header_64*                     pvt_MachHeader;
-    std::vector<segment_command_64*>    pvt_SegmentCommands;
+    using X64ImageAddress = decltype(section_64::addr);
+    using X64ImageOffset = decltype(section_64::offset);
 
-    struct {
-        std::map<size_t, section_64*>   ByIndex;
-        std::map<uint64_t, section_64*> ByMapAddress;
-        std::map<uint32_t, section_64*> ByFileOffset;
-    } pvt_Sections;
+    class X64ImageInterpreter {
+    private:
 
-    struct {
-        dysymtab_command* SegmentCommand;
-    } pvt_DynamicSymbol;
+        size_t                                          m_MachOSize;
+        const mach_header_64*                           m_MachOHeader;
+        std::vector<const segment_command_64*>          m_Segments;
+        std::vector<const section_64*>                  m_Sections;
+        std::map<X64ImageAddress, const section_64*>    m_SectionsAddressMap;
+        std::map<X64ImageOffset, const section_64*>     m_SectionsOffsetMap;
+        struct {
+            const dysymtab_command* dysymtab;
+            const symtab_command* symtab;
+            const dyld_info_command* dyld_info;
+        } m_SpecialLoadCommands;
 
-    struct {
-        symtab_command* SegmentCommand;
-        char*           StringTable;
-        nlist_64*       SymbolTable;
-    } pvt_Symbol;
+        X64ImageInterpreter() :
+            m_MachOSize(0),
+            m_MachOHeader(nullptr),
+            m_SpecialLoadCommands{} {}
 
-    struct {
-        dyld_info_command* SegmentCommand;
-    } pvt_DynamicLoaderInfoOnly;
+    public:
 
-    X64ImageInterpreter() :
-        pvt_MachHeader(nullptr),
-        pvt_DynamicSymbol{},
-        pvt_Symbol{},
-        pvt_DynamicLoaderInfoOnly{} {}
+        [[nodiscard]]
+        static X64ImageInterpreter Parse(const void* lpImage, size_t cbImage);
 
-public:
-
-    [[nodiscard]]
-    static X64ImageInterpreter Parse(void* ImageBase);
-
-    template<typename __ReturnType = void*>
-    [[nodiscard]]
-    __ReturnType ImageBase() const noexcept {
-        static_assert(std::is_pointer_v<__ReturnType>);
-        return reinterpret_cast<__ReturnType>(pvt_MachHeader);
-    }
-
-    template<typename __ReturnType = void*>
-    [[nodiscard]]
-    __ReturnType ImageOffset(size_t Offset) const noexcept {
-        static_assert(std::is_pointer_v<__ReturnType>);
-        return reinterpret_cast<__ReturnType>(
-            reinterpret_cast<uint8_t*>(pvt_MachHeader) + Offset
-        );
-    }
-
-    template<unsigned __CommandMacro>
-    [[nodiscard]]
-    auto CommandOf() const noexcept {
-        if constexpr (__CommandMacro == LC_DYSYMTAB) {
-            return pvt_DynamicSymbol.SegmentCommand;
-        } else if constexpr (__CommandMacro == LC_SYMTAB) {
-            return pvt_Symbol.SegmentCommand;
-        } else if constexpr (__CommandMacro == LC_DYLD_INFO_ONLY) { // NOLINT
-            return pvt_DynamicLoaderInfoOnly.SegmentCommand;
-        } else {
-            return nullptr;
+        template<typename __ReturnType = void*>
+        [[nodiscard]]
+        __ReturnType ImageBase() const noexcept {
+            static_assert(std::is_pointer_v<__ReturnType>);
+            return reinterpret_cast<__ReturnType>(
+                const_cast<mach_header_64*>(m_MachOHeader)
+            );
         }
-    }
 
-    [[nodiscard]]
-    size_t NumberOfSections() const noexcept;
-
-    [[nodiscard]]
-    section_64* ImageSection(size_t Index) const;
-
-    [[nodiscard]]
-    section_64* ImageSection(const char* SegmentName, const char* SectionName) const;
-
-    [[nodiscard]]
-    section_64* ImageSectionByOffset(uint32_t Offset) const;
-
-    [[nodiscard]]
-    section_64* ImageSectionByRva(uint64_t Rva) const;
-
-    template<typename __ReturnType>
-    [[nodiscard]]
-    __ReturnType SectionView(size_t Index) const {
-        auto Section = ImageSection(Index);
-        return ImageOffset<__ReturnType>(Section->offset);
-    }
-
-    template<typename __ReturnType>
-    [[nodiscard]]
-    __ReturnType SectionView(const char* SegmentName, const char* SectionName) const {
-        auto Section = ImageSection(SegmentName, SectionName);
-        return ImageOffset<__ReturnType>(Section->offset);
-    }
-
-    template<typename __ReturnType>
-    [[nodiscard]]
-    __ReturnType SectionView(section_64* Section) const {
-        return ImageOffset<__ReturnType>(Section->offset);
-    }
-
-    template<typename __ReturnType, typename __Hint>
-    [[nodiscard]]
-    __ReturnType SearchSection(size_t Index, __Hint&& Hint) const {
-        return SearchSection<__ReturnType>(ImageSection(Index), std::forward<__Hint>(Hint));
-    }
-
-    template<typename __ReturnType, typename __Hint>
-    [[nodiscard]]
-    __ReturnType SearchSection(const char* SegmentName, const char* SectionName, __Hint&& Hint) const {
-        return SearchSection<__ReturnType>(ImageSection(SegmentName, SectionName), std::forward<__Hint>(Hint));
-    }
-
-    template<typename __ReturnType, typename __Hint>
-    [[nodiscard]]
-    __ReturnType SearchSection(section_64* Section, __Hint&& Hint) const {
-        static_assert(std::is_pointer_v<__ReturnType>);
-
-        auto begin = SectionView<const uint8_t*>(Section);
-        auto end = begin + Section->size;
-
-        for (; begin < end; ++begin) {
-            if (Hint(begin) == true) {
-                return reinterpret_cast<__ReturnType>(const_cast<uint8_t*>(begin));
+        template<typename __ReturnType = void*>
+        [[nodiscard]]
+        __ReturnType ImageOffset(size_t Offset) const {
+            if (Offset < m_MachOSize) {
+                return ARL::AddressOffsetWithCast<__ReturnType>(m_MachOHeader, Offset);
+            } else {
+                throw ARL::OverflowError(__FILE__, __LINE__, "X64ImageInterpreter: out of range.");
             }
         }
 
-        // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-        throw nkg::Exception(__FILE__, __LINE__, "Data is not found.");
-    }
+        [[nodiscard]]
+        size_t ImageSize() const noexcept {
+            return m_MachOSize;
+        }
 
-    template<typename __Hint>
-    [[nodiscard]]
-    uint32_t SearchSectionOffset(size_t Index, __Hint&& Hint) const {
-        return SearchSection<uint8_t*>(Index, std::forward<__Hint>(Hint)) - ImageBase<uint8_t*>();
-    }
+        [[nodiscard]]
+        size_t NumberOfSegmentCommands() const noexcept;
 
-    template<typename __Hint>
-    [[nodiscard]]
-    uint32_t SearchSectionOffset(const char* SegmentName, const char* SectionName, __Hint&& Hint) const {
-        return SearchSection<uint8_t*>(SegmentName, SectionName, std::forward<__Hint>(Hint)) - ImageBase<uint8_t*>();
-    }
+        [[nodiscard]]
+        size_t NumberOfSections() const noexcept;
 
-    template<typename __Hint>
-    [[nodiscard]]
-    uint32_t SearchSectionOffset(section_64* Section, __Hint&& Hint) const {
-        return SearchSection<uint8_t*>(Section, std::forward<__Hint>(Hint)) - ImageBase<uint8_t*>();
-    }
+        [[nodiscard]]
+        const section_64* ImageSection(size_t Index) const;
 
-    template<typename __Hint>
-    [[nodiscard]]
-    uint64_t SearchSectionRva(size_t Index, __Hint&& Hint) const {
-        auto Section = ImageSection(Index);
-        auto Offset = SearchSection<uint8_t*>(Section, std::forward<__Hint>(Hint)) - SectionView<uint8_t*>(Section);
-        return Section->addr + Offset;
-    }
+        [[nodiscard]]
+        const section_64* ImageSection(const char* SegmentName, const char* SectionName) const;
 
-    template<typename __Hint>
-    [[nodiscard]]
-    uint64_t SearchSectionRva(const char* SegmentName, const char* SectionName, __Hint&& Hint) const {
-        auto Section = ImageSection(SegmentName, SectionName);
-        auto Offset = SearchSection<uint8_t*>(Section, std::forward<__Hint>(Hint)) - SectionView<uint8_t*>(Section);
-        return Section->addr + Offset;
-    }
+        [[nodiscard]]
+        const section_64* ImageSectionFromOffset(X64ImageOffset Offset) const;
 
-    template<typename __Hint>
-    [[nodiscard]]
-    uint64_t SearchSectionRva(section_64* Section, __Hint&& Hint) const {
-        auto Offset = SearchSection<uint8_t*>(Section, std::forward<__Hint>(Hint)) - SectionView<uint8_t*>(Section);
-        return Section->addr + Offset;
-    }
+        [[nodiscard]]
+        const section_64* ImageSectionFromRva(X64ImageAddress Rva) const;
 
-    [[nodiscard]]
-    uint64_t OffsetToRva(uint32_t Offset) const;
 
-    [[nodiscard]]
-    uint32_t RvaToOffset(uint64_t Address) const;
 
-    [[nodiscard]]
-    nlist_64* ImageSymbolTable() const noexcept;
+        template<typename __ReturnType = void*>
+        [[nodiscard]]
+        __ReturnType ImageSectionView(const section_64* Section) const noexcept {
+            return ImageOffset<__ReturnType>(Section->offset);
+        }
 
-    [[nodiscard]]
-    char* LookupStringTable(size_t Offset) const noexcept {
-        return pvt_Symbol.StringTable + Offset;
-    }
-};
+        template<typename __ReturnType = void*>
+        [[nodiscard]]
+        __ReturnType ImageSectionView(size_t Index) const {
+            return ImageSectionView<__ReturnType>(ImageSection(Index));
+        }
 
+        template<typename __ReturnType = void*>
+        [[nodiscard]]
+        __ReturnType ImageSectionView(const char* SegmentName, const char* SectionName) const {
+            return ImageSectionView<__ReturnType>(ImageSection(SegmentName, SectionName));
+        }
+
+        template<unsigned __CommandMacro>
+        [[nodiscard]]
+        auto SpecialLoadCommand() const noexcept {
+            if constexpr (__CommandMacro == LC_DYSYMTAB) {
+                return m_SpecialLoadCommands.dysymtab;
+            } else if constexpr (__CommandMacro == LC_SYMTAB) {
+                return m_SpecialLoadCommands.symtab;
+            } else if constexpr (__CommandMacro == LC_DYLD_INFO_ONLY) {
+                return m_SpecialLoadCommands.dyld_info;
+            } else {
+#pragma clang diagnostic push
+#pragma GCC diagnostic ignored "-Wtautological-compare"
+                constexpr bool always_false = __CommandMacro != __CommandMacro;
+#pragma clang diagnostic pop
+                static_assert(always_false);
+
+            }
+        }
+
+        template<typename __ReturnType = void*, typename __HintType>
+        [[nodiscard]]
+        __ReturnType SearchSection(const section_64* Section, __HintType&& Hint) const {
+            static_assert(std::is_pointer_v<__ReturnType>);
+
+            auto base = ImageSectionView<const uint8_t*>(Section);
+
+            for (decltype(section_64::size) i = 0; i < Section->size; ++i) {
+                if (Hint(base, i, Section->size) == true) {
+                    return ARL::AddressOffsetWithCast<__ReturnType>(base, i);
+                }
+            }
+
+            return nullptr;
+        }
+
+        template<typename __ReturnType = void*, typename __HintType>
+        [[nodiscard]]
+        __ReturnType SearchSection(const section_64* Section, size_t Offset, __HintType&& Hint) const {
+            static_assert(std::is_pointer_v<__ReturnType>);
+
+            auto base = ImageSectionView<const uint8_t*>(Section);
+
+            for (decltype(section_64::size) i = Offset; i < Section->size; ++i) {
+                if (Hint(base, i, Section->size) == true) {
+                    return ARL::AddressOffsetWithCast<__ReturnType>(base, i);
+                }
+            }
+
+            return nullptr;
+        }
+
+        template<typename __ReturnType = void*, typename __HintType>
+        [[nodiscard]]
+        __ReturnType SearchSection(size_t Index, __HintType&& Hint) const {
+            return SearchSection<__ReturnType>(ImageSection(Index), std::forward<__HintType>(Hint));
+        }
+
+        template<typename __ReturnType = void*, typename __HintType>
+        [[nodiscard]]
+        __ReturnType SearchSection(size_t Index, size_t Offset, __HintType&& Hint) const {
+            return SearchSection<__ReturnType>(ImageSection(Index), Offset, std::forward<__HintType>(Hint));
+        }
+
+        template<typename __ReturnType = void*, typename __HintType>
+        [[nodiscard]]
+        __ReturnType SearchSection(const char* SegmentName, const char* SectionName, __HintType&& Hint) const {
+            return SearchSection<__ReturnType>(ImageSection(SegmentName, SectionName), std::forward<__HintType>(Hint));
+        }
+
+        template<typename __ReturnType = void*, typename __HintType>
+        [[nodiscard]]
+        __ReturnType SearchSection(const char* SegmentName, const char* SectionName, size_t Offset, __HintType&& Hint) const {
+            return SearchSection<__ReturnType>(ImageSection(SegmentName, SectionName), Offset, std::forward<__HintType>(Hint));
+        }
+
+
+
+        [[nodiscard]]
+        X64ImageAddress ConvertOffsetToRva(X64ImageOffset Offset) const;
+
+        template<typename __ReturnType = void*>
+        [[nodiscard]]
+        __ReturnType ConvertOffsetToPtr(X64ImageOffset Offset) const {
+            return ImageOffset<__ReturnType>(Offset);
+        }
+
+        [[nodiscard]]
+        X64ImageOffset ConvertRvaToOffset(X64ImageAddress Address) const;
+
+        template<typename __ReturnType = void*>
+        [[nodiscard]]
+        __ReturnType ConvertRvaToPtr(X64ImageAddress Rva) const {
+            return ConvertOffsetToPtr<__ReturnType>(ConvertRvaToOffset(Rva));
+        }
+
+        template<typename __PtrType>
+        [[nodiscard]]
+        X64ImageAddress ConvertPtrToRva(__PtrType Ptr) const {
+            auto offset = ARL::AddressDelta(Ptr, m_MachOHeader);
+            if (offset < m_MachOSize) {
+                return ConvertOffsetToRva(offset);
+            } else {
+                throw ARL::OverflowError(__FILE__, __LINE__, "X64ImageInterpreter: out of range.");
+            }
+        }
+
+        template<typename __PtrType>
+        [[nodiscard]]
+        X64ImageAddress ConvertPtrToOffset(__PtrType Ptr) const {
+            auto offset = ARL::AddressDelta(Ptr, m_MachOHeader);
+            if (offset < m_MachOSize) {
+                return offset;
+            } else {
+                throw ARL::OverflowError(__FILE__, __LINE__, "X64ImageInterpreter: out of range.");
+            }
+        }
+
+    };
+
+}

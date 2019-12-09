@@ -1,35 +1,38 @@
 #pragma once
-#include <errno.h>  // NOLINT
+#include <errno.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include "../common/ExceptionSystem.hpp"
+#include "ExceptionSystem.hpp"
 
-struct FileHandleTraits {
-    using HandleType = int;
+namespace ARL::ResourceTraits {
 
-    static inline const HandleType InvalidValue = -1;
+    struct FileDescriptor {
+        using HandleType = int;
 
-    [[nodiscard]]
-    static bool IsValid(const HandleType& Handle) noexcept {
-        return Handle != InvalidValue;
-    }
+        static inline const HandleType InvalidValue = -1;
 
-    static void Releasor(const HandleType& Handle) {
-        if (close(Handle) != 0) {
-            // NOLINTNEXTLINE: allow exceptions that is not derived from std::exception
-            throw nkg::SystemError(__FILE__, __LINE__, errno, "close failed.");
+        [[nodiscard]]
+        static bool IsValid(const HandleType& Handle) noexcept {
+            return Handle != InvalidValue;
         }
-    }
-};
 
-struct MapViewTraits {
-    using HandleType = void*;
+        static void Release(const HandleType& Handle) {
+            if (close(Handle) != 0) {
+                throw ARL::SystemError(__FILE__, __LINE__, errno, "close failed.");
+            }
+        }
+    };
 
-    static inline const HandleType InvalidValue = MAP_FAILED;
+    struct MapView {
+        using HandleType = void*;
 
-    [[nodiscard]]
-    static bool IsValid(const HandleType& Handle) noexcept {
-        return Handle != InvalidValue;
-    }
-};
+        static inline const HandleType InvalidValue = MAP_FAILED;
+
+        [[nodiscard]]
+        static bool IsValid(const HandleType& Handle) noexcept {
+            return Handle != InvalidValue;
+        }
+    };
+
+}
 
