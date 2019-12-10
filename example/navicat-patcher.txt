@@ -1,0 +1,188 @@
+**********************************************************
+*       Navicat Patcher (macOS) by @DoubleLabyrinth      *
+*                  Version: 5.0                          *
+**********************************************************
+
+Press Enter to continue or Ctrl + C to abort.
+
+[+] Try to open "Contents/MacOS/Navicat Premium" ... Ok!
+[+] Try to open "Contents/Frameworks/libcc-premium.dylib" ... Ok!
+
+[-] PatchSolution0 ...... Omitted.
+[-] PatchSolution1 ...... Omitted.
+[-] PatchSolution2 ...... Omitted.
+[+] PatchSolution3 ...... Ready to apply.
+    fnGenerateKeyA RVA = 0x000000000116c3b8
+    fnGenerateKeyB RVA = 0x00000000011788d2
+    std::string::append(const char*, size_t) RVA = 0x0000000001848974
+
+[*] Your Navicat version: 15.0.4
+
+[*] Generating new RSA private key, it may take a long time...
+[*] Your RSA private key:
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEowIBAAKCAQEA4CF6I7Tcrll2LPW7XwH0WRq0I8uIonHa81zUaFXCGMzsfy79
+    R9zrG5JdvLv0Q2LXqIESZBaoBaJI2rS9wcG9BklAcuSL6OA8g9iDbr9QRJeqvtZg
+    pYnmp85qfZNoTp+rKQOKMZ/i4JaYQKcc9ZcZEXaUysn8CFIUAoKqqMOtyiggpuD5
+    tTvWni+HrHNoBQFm+ro2h8m6wexe0GLh9M81ljkGOyCuaOKkCq4TPUnH3umk15WI
+    N2XhDGYYwFlPQIPGKzHFJrTegC9PsBTAoYjzqJ9PQK6GIA3DhgdS3WR/pun3AKmn
+    WOwvUgRG27qZtNY5Fa4JzB/TqiFGbsaKwKjWlQIDAQABAoIBABY0muJAwAByEpg/
+    vFGcYvYVBDXrq1zUxOmJj+3KWVGVs/Sh1iwxggWYSbsyL/AhMdaa+xR5fioYuvkY
+    IRi6Nh0SUtVPOWFYHga+A7+MKsqw8BS6LpcYA4cqlzhby2DGxvFoTV+/RH4VzX3S
+    ULcwQiaNxg4VVugIIb1h7sCLqoM1qQI6Ct2uzfkE4pwwWR2XO8m3mMTRe9tTfv2H
+    hnhc7QNuQEnz4fDYPF+/7P48eJoB/w+JPcN4JH9y/n47D2paGRYh1XdxlvHl8Bqu
+    9NuhfLhcWqZ306RIUJejudoYkPuW01ncgbUqI/Vs3wklZZRcM9ISzgLiBgT1jBmd
+    aQyAO/0CgYEA/jFsZIWOE8hddMXvGlBOtl0xVLYujVknqs6QDStG+JM6p9Q/+6/x
+    Mh5fTz9DauAJZEySw0Og2wO0yJvfHVigRlomAsEgCrAhNVT+bYokWeyECxmU/IFL
+    ndObUqxBxRS9ch/rxpVnShq4kPZQ/5G/0UibSBEnpPsoX1EMApSRnKsCgYEA4blY
+    yHPIRQfHwjC4X+xvIuqZdjS3QyQcpwjcVUjTm6l71jZ0W1LH10BQoPmDCb8FHR3T
+    SY6QY8SpWd9C0FjTtg8lj3xKBNc8RZ9LLMjXM4GiGzwESDTRzgNQTbZsD19cJjnQ
+    JlN5LkCHRERByqRWi9OX8CX5IejoYWmbCv6o2b8CgYEA9eeKHJS3JZwoDNeOv74A
+    55qwJms4DbW6EhtSb+r19XM4wzMp0qoag4muWlOxPKsPauBI+m1qJ3YmZgukhBdA
+    tc5wByodfTl2ZsmaeQ2yrOuJsdNFtiC+rigPkqLh3W569vS6epn+GkpPUq13HkY5
+    cpTy43z1BT2TiOI25Cgl1ZECgYB9SJmdkJ3sqpfWEaKUIy/AKoQI1tOM4YNBtqpM
+    b8J7mINSbyD/+x9OOrVF05dGlo5pDb/TCNzdcy8n4cI8z8CaQSfwzuRqcWhToEli
+    Twsa3G20PgiGZ0K33KD6sTCjC6Oi193PF++fm1M4scXuim4657NiKEFx78rjHnFe
+    ld/0EwKBgHSZp9mLN1qifNUygw/TOWZ4Ihwhqeh/4agTbSSLuElT3M0d2dXighSn
+    efP6t0EAInY78FtWPNFgZxO4Y/II+SSI74vyIYmgyvM31uxaiifPSkw6eoeL5JAP
+    rWYcPk4BfJn30HN0xwHG/ddbp6TOPZkoFZu5rwzBCFtp2L2YjJdI
+    -----END RSA PRIVATE KEY-----
+[*] Your RSA public key:
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4CF6I7Tcrll2LPW7XwH0
+    WRq0I8uIonHa81zUaFXCGMzsfy79R9zrG5JdvLv0Q2LXqIESZBaoBaJI2rS9wcG9
+    BklAcuSL6OA8g9iDbr9QRJeqvtZgpYnmp85qfZNoTp+rKQOKMZ/i4JaYQKcc9ZcZ
+    EXaUysn8CFIUAoKqqMOtyiggpuD5tTvWni+HrHNoBQFm+ro2h8m6wexe0GLh9M81
+    ljkGOyCuaOKkCq4TPUnH3umk15WIN2XhDGYYwFlPQIPGKzHFJrTegC9PsBTAoYjz
+    qJ9PQK6GIA3DhgdS3WR/pun3AKmnWOwvUgRG27qZtNY5Fa4JzB/TqiFGbsaKwKjW
+    lQIDAQAB
+    -----END PUBLIC KEY-----
+
+**************************************************************
+*                      PatchSolution3                        *
+**************************************************************
+[*] Previous:
++0x000000000116c3b0                          55 48 89 e5 41 57 41 56          UH..AWAV
++0x000000000116c3c0  41 55 41 54 53 48 83 ec 48 48 89 7d 98 b0 01 88  AUATSH..HH.}....
++0x000000000116c3d0  45 d5 88 45 d6 c6 45 d7 00 48 8d 35 30 7b 2a 01  E..E..E..H.50{*.
++0x000000000116c3e0  48 8d 5d a0 48 89 df e8 e0 52 01 00 48 89 df be  H.].H....R..H...
++0x000000000116c3f0  6b 00 00 00 e8 c9 c5 6d 00 e8 62 53 01 00 88 45  k......m..bS...E
++0x000000000116c400  d6 e8 d4 53 01 00 88 45 d7 e8 46 54 01 00 88 45  ...S...E..FT...E
++0x000000000116c410  d5 f6 45 d7 01 75 3f f6 45 d5 01 0f 85 12 01 00  ..E..u?.E.......
++0x000000000116c420  00 f6 45 d6 01 0f 84 a7 70 00 00 48 8d 35 ad 82  ..E.....p..H.5..
++0x000000000116c430  2f 01 48 8d 7d b8 e8 91 52 01 00 0f b6 55 b8 89  /.H.}...R....U..
++0x000000000116c440  d0 24 01 0f 84 5f 02 00 00 48 8b 75 c8 48 8b 55  .$..._...H.u.H.U
++0x000000000116c450  c0 e9 59 02 00 00 48 8d 35 70 82 2f 01 48 8d 7d  ..Y...H.5p./.H.}
++0x000000000116c460  a0 e8 08 c5 6d 00 48 8d 7d a0 be 61 00 00 00 e8  ....m.H.}..a....
++0x000000000116c470  4e c5 6d 00 48 8d 35 4e 87 2f 01 48 8d 7d a0 e8  N.m.H.5N./.H.}..
++0x000000000116c480  ea c4 6d 00 48 8d 35 47 87 2f 01 48 8d 7d a0 e8  ..m.H.5G./.H.}..
++0x000000000116c490  da c4 6d 00 e8 d5 5b 01 00 88 45 d5 e8 e5 59 01  ..m...[...E...Y.
++0x000000000116c4a0  00 88 45 d7 e8 d1 5a 01 00 88 45 d6 f6 45 d7 01  ..E...Z...E..E..
++0x000000000116c4b0  0f 85 13 4f 00 00 f6 45 d5 01 0f 85 ac 00 00 00  ...O...E........
++0x000000000116c4c0  f6 45 d6 01 0f 84 08 70 00 00 48 8d 7d a0 be 58  .E.....p..H.}..X
++0x000000000116c4d0  00 00 00 e8 ea c4 6d 00 48 8d 35 a8 2a 30 01 48  ......m.H.5.*0.H
++0x000000000116c4e0  8d 7d a0 e8 86 c4 6d 00 48 8d 35 ad ca 2e 01 48  .}....m.H.5....H
++0x000000000116c4f0  8d 7d a0 e8 76 c4 6d 00 e8 03 5a 01 00 88 45 d6  .}..v.m...Z...E.
++0x000000000116c500  e8 d5 52 01 00 88 45 d5 e8 ff 58 01 00 88 45 d7  ..R...E...X...E.
++0x000000000116c510  f6 45 d5 01 0f 85 53 01 00 00 f6 45 d6 01 0f 85  .E....S....E....
++0x000000000116c520  53 02 00 00 f6 45 d7 01 0f 85 57 7b 00 00 e9 9f  S....E....W{....
++0x000000000116c530  6f 00 00 48 8d 35 c5 8c 94 00 48 8d 7d a0 ba 01  o..H.5....H.}...
++0x000000000116c540  00 00 00 e8 2c c4 6d 00 48 8d 35 84 81 2f 01 48  ....,.m.H.5../.H
++0x000000000116c550  8d 7d b8 e8 74 51 01 00 0f b6 55 b8 89 d0 24 01  .}..tQ....U...$.
++0x000000000116c560  74 2e 48 8b 75                                   t.H.u           
+[*] After:
++0x000000000116c3b0                          55 48 89 e5 48 31 c0 48          UH..H1.H
++0x000000000116c3c0  89 07 48 89 47 08 48 89 47 10 ba 88 01 00 00 48  ..H.G.H.G......H
++0x000000000116c3d0  8d 35 07 00 00 00 e8 99 c5 6d 00 c9 c3 4d 49 49  .5.......m...MII
++0x000000000116c3e0  42 49 6a 41 4e 42 67 6b 71 68 6b 69 47 39 77 30  BIjANBgkqhkiG9w0
++0x000000000116c3f0  42 41 51 45 46 41 41 4f 43 41 51 38 41 4d 49 49  BAQEFAAOCAQ8AMII
++0x000000000116c400  42 43 67 4b 43 41 51 45 41 34 43 46 36 49 37 54  BCgKCAQEA4CF6I7T
++0x000000000116c410  63 72 6c 6c 32 4c 50 57 37 58 77 48 30 57 52 71  crll2LPW7XwH0WRq
++0x000000000116c420  30 49 38 75 49 6f 6e 48 61 38 31 7a 55 61 46 58  0I8uIonHa81zUaFX
++0x000000000116c430  43 47 4d 7a 73 66 79 37 39 52 39 7a 72 47 35 4a  CGMzsfy79R9zrG5J
++0x000000000116c440  64 76 4c 76 30 51 32 4c 58 71 49 45 53 5a 42 61  dvLv0Q2LXqIESZBa
++0x000000000116c450  6f 42 61 4a 49 32 72 53 39 77 63 47 39 42 6b 6c  oBaJI2rS9wcG9Bkl
++0x000000000116c460  41 63 75 53 4c 36 4f 41 38 67 39 69 44 62 72 39  AcuSL6OA8g9iDbr9
++0x000000000116c470  51 52 4a 65 71 76 74 5a 67 70 59 6e 6d 70 38 35  QRJeqvtZgpYnmp85
++0x000000000116c480  71 66 5a 4e 6f 54 70 2b 72 4b 51 4f 4b 4d 5a 2f  qfZNoTp+rKQOKMZ/
++0x000000000116c490  69 34 4a 61 59 51 4b 63 63 39 5a 63 5a 45 58 61  i4JaYQKcc9ZcZEXa
++0x000000000116c4a0  55 79 73 6e 38 43 46 49 55 41 6f 4b 71 71 4d 4f  Uysn8CFIUAoKqqMO
++0x000000000116c4b0  74 79 69 67 67 70 75 44 35 74 54 76 57 6e 69 2b  tyiggpuD5tTvWni+
++0x000000000116c4c0  48 72 48 4e 6f 42 51 46 6d 2b 72 6f 32 68 38 6d  HrHNoBQFm+ro2h8m
++0x000000000116c4d0  36 77 65 78 65 30 47 4c 68 39 4d 38 31 6c 6a 6b  6wexe0GLh9M81ljk
++0x000000000116c4e0  47 4f 79 43 75 61 4f 4b 6b 43 71 34 54 50 55 6e  GOyCuaOKkCq4TPUn
++0x000000000116c4f0  48 33 75 6d 6b 31 35 57 49 4e 32 58 68 44 47 59  H3umk15WIN2XhDGY
++0x000000000116c500  59 77 46 6c 50 51 49 50 47 4b 7a 48 46 4a 72 54  YwFlPQIPGKzHFJrT
++0x000000000116c510  65 67 43 39 50 73 42 54 41 6f 59 6a 7a 71 4a 39  egC9PsBTAoYjzqJ9
++0x000000000116c520  50 51 4b 36 47 49 41 33 44 68 67 64 53 33 57 52  PQK6GIA3DhgdS3WR
++0x000000000116c530  2f 70 75 6e 33 41 4b 6d 6e 57 4f 77 76 55 67 52  /pun3AKmnWOwvUgR
++0x000000000116c540  47 32 37 71 5a 74 4e 59 35 46 61 34 4a 7a 42 2f  G27qZtNY5Fa4JzB/
++0x000000000116c550  54 71 69 46 47 62 73 61 4b 77 4b 6a 57 6c 51 49  TqiFGbsaKwKjWlQI
++0x000000000116c560  44 41 51 41 42                                   DAQAB           
+
+[*] Previous:
++0x00000000011788d0        55 48 89 e5 41 56 53 48 83 ec 40 49 89 fe    UH..AVSH..@I..
++0x00000000011788e0  c6 45 ed 01 31 c0 88 45 ee 88 45 ef 48 8d 35 1d  .E..1..E..E.H.5.
++0x00000000011788f0  b6 29 01 48 8d 5d b0 48 89 df e8 cd 8d 00 00 48  .).H.].H.......H
++0x0000000001178900  8d 35 67 ce 93 00 ba 06 00 00 00 48 89 df e8 61  .5g........H...a
++0x0000000001178910  00 6d 00 e8 e4 97 00 00 88 45 ee e8 56 98 00 00  .m.......E..V...
++0x0000000001178920  88 45 ed e8 c8 98 00 00 88 45 ef f6 45 ee 01 75  .E.......E..E..u
++0x0000000001178930  33 f6 45 ed 01 75 51 f6 45 ef 01 0f 84 b8 8a 00  3.E..uQ.E.......
++0x0000000001178940  00 48 8d 7d b0 be 58 00 00 00 e8 73 00 6d 00 48  .H.}..X....s.m.H
++0x0000000001178950  8d 35 1b d4 2e 01 48 8d 7d b0 e8 0f 00 6d 00 e9  .5....H.}....m..
++0x0000000001178960  6b 19 00 00 48 8d 35 60 cb 2e 01 48 8d 7d d0 e8  k...H.5`...H.}..
++0x0000000001178970  58 8d 00 00 0f b6 55 d0 89 d0 24 01 74 40 48 8b  X.....U...$.t@H.
++0x0000000001178980  75 e0 48 8b 55 d8 eb 3d 48 8d 7d b0 be 75 00 00  u.H.U..=H.}..u..
++0x0000000001178990  00 e8 2c 00 6d 00 48 8d 7d b0 be 44 00 00 00 e8  ..,.m.H.}..D....
++0x00000000011789a0  1e 00 6d 00 48 8d 35 bc d1 93 00 48 8d 7d b0 ba  ..m.H.5....H.}..
++0x00000000011789b0  07 00 00 00 e8 bb ff 6c 00 e9 66 7a 00 00 48 d1  .......l..fz..H.
++0x00000000011789c0  ea 48 8d 75 d1 48 8d 7d b0 e8 a6 ff 6c 00 f6 45  .H.u.H.}....l..E
++0x00000000011789d0  d0 01 74 09 48 8b 7d e0 e8 49 02 6d 00 48 8d 35  ..t.H.}..I.m.H.5
++0x00000000011789e0  ed ca 2e 01 48 8d 7d b0 e8 81 ff 6c 00 48 8d 35  ....H.}....l.H.5
++0x00000000011789f0  59 c1 2e 01 48 8d 7d b0 e8 71 ff 6c 00 e8 68 98  Y...H.}..q.l..h.
++0x0000000001178a00  00 00 88 45 ed e8 da 98 00 00 88 45 ef e8 4c 99  ...E.......E..L.
++0x0000000001178a10  00 00 88 45 ee f6 45 ee 01 0f 85 61 27 00 00 f6  ...E..E....a'...
++0x0000000001178a20  45 ed 01 75 0f f6 45 ef 01 0f 85 8c 7d 00 00 e9  E..u..E.....}...
++0x0000000001178a30  c5 89 00 00 48 8d 35 fb cf 2e 01 48 8d 7d b0 e8  ....H.5....H.}..
++0x0000000001178a40  2a ff 6c 00 48 8d 35 f1 cf 2e 01 48 8d 7d d0 e8  *.l.H.5....H.}..
++0x0000000001178a50  78 8c 00 00 0f b6 55 d0 89 d0 24 01 74 0a 48 8b  x.....U...$.t.H.
++0x0000000001178a60  75 e0 48 8b 55 d8 eb 07 48 d1 ea 48 8d 75 d1 48  u.H.U...H..H.u.H
++0x0000000001178a70  8d 7d b0 e8 fc fe 6c 00 f6 45 d0 01 74 09 48     .}....l..E..t.H 
+[*] After:
++0x00000000011788d0        55 48 89 e5 48 31 c0 48 89 07 48 89 47 08    UH..H1.H..H.G.
++0x00000000011788e0  48 89 47 10 ba 88 01 00 00 48 8d 35 07 00 00 00  H.G......H.5....
++0x00000000011788f0  e8 7f 00 6d 00 c9 c3 00 00 00 00 00 00 00 00 00  ...m............
++0x0000000001178900  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178910  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178920  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178930  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178940  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178950  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178960  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178970  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178980  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178990  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x00000000011789a0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x00000000011789b0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x00000000011789c0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x00000000011789d0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x00000000011789e0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x00000000011789f0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178a00  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178a10  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178a20  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178a30  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178a40  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178a50  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178a60  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
++0x0000000001178a70  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     ............... 
+
+[+] PatchSolution3 has been applied.
+[*] New RSA-2048 private key has been saved to
+    /Users/doublesine/github.com/navicat-keygen/bin/RegPrivateKey.pem
+
+
+**************************************************************
+*   Patch has been done successfully. Have fun and enjoy~~   *
+*    DO NOT FORGET TO SIGN NAVICAT BY YOUR CERTIFICATE!!!    *
+**************************************************************
