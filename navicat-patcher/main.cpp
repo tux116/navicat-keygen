@@ -110,7 +110,8 @@ static std::string GetNavicatVersion(std::string_view AppPath) {
 static void LoadKey(nkg::RSACipher& Cipher, std::string_view szKeyFileName,
                     nkg::PatchSolution* lpSolution0,
                     nkg::PatchSolution* lpSolution1,
-                    nkg::PatchSolution* lpSolution2) {
+                    nkg::PatchSolution* lpSolution2,
+                    nkg::PatchSolution* lpSolution3) {
     if (szKeyFileName.empty() == false) {
         printf("[*] Import RSA-2048 key from %s\n", szKeyFileName.data());
 
@@ -118,7 +119,8 @@ static void LoadKey(nkg::RSACipher& Cipher, std::string_view szKeyFileName,
 
         if ((lpSolution0 && lpSolution0->CheckKey(Cipher) == false) ||
             (lpSolution1 && lpSolution1->CheckKey(Cipher) == false) ||
-            (lpSolution2 && lpSolution2->CheckKey(Cipher) == false))
+            (lpSolution2 && lpSolution2->CheckKey(Cipher) == false) ||
+            (lpSolution3 && lpSolution3->CheckKey(Cipher) == false))
         {
             throw ARL::Exception(__FILE__, __LINE__, "The RSA private key you provide cannot be used.");
         }
@@ -129,7 +131,8 @@ static void LoadKey(nkg::RSACipher& Cipher, std::string_view szKeyFileName,
             Cipher.GenerateKey(2048);
         } while ((lpSolution0 && lpSolution0->CheckKey(Cipher) == false) ||
                  (lpSolution1 && lpSolution1->CheckKey(Cipher) == false) ||
-                 (lpSolution2 && lpSolution2->CheckKey(Cipher) == false));   // re-generate RSA key if CheckKey return false
+                 (lpSolution2 && lpSolution2->CheckKey(Cipher) == false) ||
+                 (lpSolution3 && lpSolution3->CheckKey(Cipher) == false));   // re-generate RSA key if CheckKey return false
     }
 
     printf("[*] Your RSA private key:\n");
@@ -190,6 +193,7 @@ int main(int argc, char* argv[]) {
             ARL::ResourceWrapper lpSolution0{ ARL::ResourceTraits::CppObject<nkg::PatchSolution>{} };
             ARL::ResourceWrapper lpSolution1{ ARL::ResourceTraits::CppObject<nkg::PatchSolution>{} };
             ARL::ResourceWrapper lpSolution2{ ARL::ResourceTraits::CppObject<nkg::PatchSolution>{} };
+            ARL::ResourceWrapper lpSolution3{ ARL::ResourceTraits::CppObject<nkg::PatchSolution>{} };
 
             std::string             main_path;
             ARL::ResourceWrapper    main_fd{ ARL::ResourceTraits::FileDescriptor{} };
@@ -201,8 +205,19 @@ int main(int argc, char* argv[]) {
             } };
             ARL::ResourceWrapper    main_interpreter{ ARL::ResourceTraits::CppObject<nkg::X64ImageInterpreter>{} };
 
+            std::string             libcc_path;
+            ARL::ResourceWrapper    libcc_fd{ ARL::ResourceTraits::FileDescriptor{} };
+            ARL::ResourceWrapper    libcc_stat{ ARL::ResourceTraits::CppObject<struct stat>{} };
+            ARL::ResourceWrapperEx  libcc_mmap{ ARL::ResourceTraits::MapView{}, [&libcc_stat](void* p) { 
+                if (munmap(p, libcc_stat->st_size) < 0) {
+                    throw ARL::SystemError(__FILE__, __LINE__, errno, "munmap failed.");
+                } 
+            } };
+            ARL::ResourceWrapper    libcc_interpreter{ ARL::ResourceTraits::CppObject<nkg::X64ImageInterpreter>{} };
+
             //
-            // try open "/Contents/MacOS/Navicat Premium"
+            // try open "Contents/MacOS/Navicat Premium"
+            // try open "Contents/Frameworks/libcc-premium.dylib"
             //
             main_path = szInstallPath + "/Contents/MacOS/Navicat Premium";
             main_fd.TakeOver(open(main_path.c_str(), O_RDWR));
@@ -216,8 +231,21 @@ int main(int argc, char* argv[]) {
                 }
             }
 
+            libcc_path = szInstallPath + "/Contents/Frameworks/libcc-premium.dylib";
+            libcc_fd.TakeOver(open(libcc_path.c_str(), O_RDWR));
+            if (libcc_fd.IsValid()) {
+                printf("[+] Try to open \"%s\" ... Ok!\n", "Contents/Frameworks/libcc-premium.dylib");
+            } else {
+                if (errno == ENOENT) {
+                    printf("[-] Try to open \"%s\" ... Not found!\n", "Contents/Frameworks/libcc-premium.dylib");
+                } else {
+                    throw ARL::SystemError(__FILE__, __LINE__, errno, "open failed.");
+                }
+            }
+
             //
-            // try map "/Contents/MacOS/Navicat Premium"
+            // try map "Contents/MacOS/Navicat Premium"
+            // try map "Contents/Frameworks/libcc-premium.dylib"
             //
             if (main_fd.IsValid()) {
                 main_stat.TakeOver(new struct stat());
@@ -245,6 +273,26 @@ int main(int argc, char* argv[]) {
                 );
             }
 
+            if (libcc_fd.IsValid()) {
+                libcc_stat.TakeOver(new struct stat());
+                if (fstat(libcc_fd, libcc_stat) != 0) {
+                    throw ARL::SystemError(__FILE__, __LINE__, errno, "fstat failed.");
+                }
+
+                libcc_mmap.TakeOver(mmap(nullptr, libcc_stat->st_size, PROT_READ | PROT_WRITE, MAP_SHARED, libcc_fd, 0));
+                if (libcc_mmap.IsValid() == false) {
+                    throw ARL::SystemError(__FILE__, __LINE__, errno, "mmap failed.");
+                }
+
+                libcc_interpreter.TakeOver(
+                    new nkg::X64ImageInterpreter(nkg::X64ImageInterpreter::Parse(libcc_mmap, libcc_stat->st_size))
+                );
+
+                lpSolution3.TakeOver(
+                    new nkg::PatchSolution3(*libcc_interpreter.Get())
+                );
+            }
+
             puts("");
 
             if (lpSolution0.IsValid() && lpSolution0->FindPatchOffset() == false) {
@@ -255,6 +303,9 @@ int main(int argc, char* argv[]) {
             }
             if (lpSolution2.IsValid() && lpSolution2->FindPatchOffset() == false) {
                 lpSolution2.Release();
+            }
+            if (lpSolution3.IsValid() && lpSolution3->FindPatchOffset() == false) {
+                lpSolution3.Release();
             }
 
             if (int Ver0, Ver1, Ver2; sscanf(GetNavicatVersion(szInstallPath).c_str(), "%d.%d.%d", &Ver0, &Ver1, &Ver2) == 3) {
@@ -289,9 +340,16 @@ int main(int argc, char* argv[]) {
                         puts("    Are you sure your Navicat has not been patched/modified before?");
                         return -1;
                     }
-                } else {                     // ver > 12.1.14
+                } else if (Ver0 == 12) {                                                // ver == 12.x.x
                     // In this case, Solution0 and Solution2 must be applied
                     if ((lpSolution0.IsValid() && lpSolution2.IsValid()) == false) {
+                        puts("[-] Patch abort. None of PatchSolutions will be applied.");
+                        puts("    Are you sure your Navicat has not been patched/modified before?");
+                        return -1;
+                    }
+                } else {                                                                // ver == 15.x.x
+                    // In this case, Solution3 must be applied
+                    if (lpSolution3.IsValid() == false) {
                         puts("[-] Patch abort. None of PatchSolutions will be applied.");
                         puts("    Are you sure your Navicat has not been patched/modified before?");
                         return -1;
@@ -307,12 +365,12 @@ int main(int argc, char* argv[]) {
             //
             // Make sure that there is one patch solution at least existing.
             //
-            if (lpSolution0.IsValid() == false && lpSolution1.IsValid() == false && lpSolution2.IsValid() == false) {
+            if (lpSolution0.IsValid() == false && lpSolution1.IsValid() == false && lpSolution2.IsValid() == false && lpSolution3.IsValid() == false) {
                 throw ARL::Exception(__FILE__, __LINE__, "No patch applied. Patch abort!")
                     .PushHint("Are you sure your Navicat has not been patched/modified before?");
             }
 
-            LoadKey(Cipher, szKeyFilePath, lpSolution0, lpSolution1, lpSolution2);
+            LoadKey(Cipher, szKeyFilePath, lpSolution0, lpSolution1, lpSolution2, lpSolution3);
 
             if (bDryrun == false) {
                 //
@@ -334,6 +392,9 @@ int main(int argc, char* argv[]) {
                 if (lpSolution2.IsValid()) {
                     lpSolution2->MakePatch(Cipher);
                 }
+                if (lpSolution3.IsValid()) {
+                    lpSolution3->MakePatch(Cipher);
+                }
 
                 if (lpSolution0.IsValid()) {
                     puts("[+] PatchSolution0 has been applied.");
@@ -343,6 +404,9 @@ int main(int argc, char* argv[]) {
                 }
                 if (lpSolution2.IsValid()) {
                     puts("[+] PatchSolution2 has been applied.");
+                }
+                if (lpSolution3.IsValid()) {
+                    puts("[+] PatchSolution3 has been applied.");
                 }
 
                 if (szKeyFilePath.empty()) {

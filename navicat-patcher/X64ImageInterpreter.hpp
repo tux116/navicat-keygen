@@ -12,6 +12,7 @@ namespace nkg {
 
     using X64ImageAddress = decltype(section_64::addr);
     using X64ImageOffset = decltype(section_64::offset);
+    using X64ImageSize = decltype(section_64::size);
 
     class X64ImageInterpreter {
     private:
@@ -63,10 +64,16 @@ namespace nkg {
         }
 
         [[nodiscard]]
-        size_t NumberOfSegmentCommands() const noexcept;
+        size_t NumberOfSegments() const noexcept;
 
         [[nodiscard]]
         size_t NumberOfSections() const noexcept;
+
+        [[nodiscard]]
+        const segment_command_64* ImageSegment(size_t Index) const;
+
+        [[nodiscard]]
+        const segment_command_64* ImageSegment(const char* SegmentName) const;
 
         [[nodiscard]]
         const section_64* ImageSection(size_t Index) const;

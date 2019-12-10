@@ -52,13 +52,32 @@ namespace nkg {
     }
 
     [[nodiscard]]
-    size_t X64ImageInterpreter::NumberOfSegmentCommands() const noexcept {
+    size_t X64ImageInterpreter::NumberOfSegments() const noexcept {
         return m_Segments.size();
     }
 
     [[nodiscard]]
     size_t X64ImageInterpreter::NumberOfSections() const noexcept {
         return m_Sections.size();
+    }
+
+    [[nodiscard]]
+    const segment_command_64* X64ImageInterpreter::ImageSegment(size_t Index) const {
+        if (Index < m_Segments.size()) {
+            return m_Segments[Index];
+        } else {
+            throw ARL::IndexError(__FILE__, __LINE__, "X64ImageInterpreter: Index is out of range.");
+        }
+    }
+
+    [[nodiscard]]
+    const segment_command_64* X64ImageInterpreter::ImageSegment(const char* SegmentName) const {
+        for (const auto& segment : m_Segments) {
+            if (strncmp(SegmentName, segment->segname, sizeof(segment->segname)) == 0) {
+                return segment;
+            }
+        }
+        throw ARL::KeyError(__FILE__, __LINE__, "X64ImageInterpreter: segment is not found.");
     }
 
     [[nodiscard]]

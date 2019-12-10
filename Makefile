@@ -44,6 +44,7 @@ $(PATCHER_DIR)X64ImageInterpreter.cpp \
 $(PATCHER_DIR)PatchSolution0.cpp \
 $(PATCHER_DIR)PatchSolution1.cpp \
 $(PATCHER_DIR)PatchSolution2.cpp \
+$(PATCHER_DIR)PatchSolution3.cpp \
 $(PATCHER_DIR)main.cpp
 
 PATCHER_BINARY = $(OUTPUT_DIR)navicat-patcher
