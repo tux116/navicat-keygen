@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <signal.h>
 #include <setjmp.h>
-#include <filesystem>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include "ExceptionSystem.hpp"
 
 static jmp_buf g_jmbuf;
@@ -105,55 +107,60 @@ namespace nkg::Misc {
 
     [[nodiscard]]
     bool FsIsExist(std::string_view szPath) {
-        std::error_code ec;
-        if (std::filesystem::exists(szPath, ec)) {
+        struct stat s = {};
+        if (stat(szPath.data(), &s) == 0) {
             return true;
         } else {
-            if (ec) {
-                throw ARL::SystemError(__FILE__, __LINE__, ec.value(), "std::filesystem::exists failed.");
-            } else {
+            if (errno == ENOENT) {
                 return false;
+            } else {
+                throw ARL::SystemError(__FILE__, __LINE__, errno, "stat failed.");
             }
         }
     }
 
     [[nodiscard]]
     bool FsIsFile(std::string_view szPath) {
-        std::error_code ec;
-        if (std::filesystem::is_regular_file(szPath, ec)) {
-            return true;
+        struct stat s = {};
+        if (stat(szPath.data(), &s) == 0) {
+            return S_ISREG(s.st_mode);
         } else {
-            if (ec) {
-                throw ARL::SystemError(__FILE__, __LINE__, ec.value(), "std::filesystem::is_regular_file failed.");
-            } else {
+            if (errno == ENOENT) {
                 return false;
+            } else {
+                throw ARL::SystemError(__FILE__, __LINE__, errno, "stat failed.");
             }
         }
     }
     
     [[nodiscard]]
     bool FsIsDirectory(std::string_view szPath) {
-        std::error_code ec;
-        if (std::filesystem::is_directory(szPath, ec)) {
-            return true;
+        struct stat s = {};
+        if (stat(szPath.data(), &s) == 0) {
+            return S_ISDIR(s.st_mode);
         } else {
-            if (ec) {
-                throw ARL::SystemError(__FILE__, __LINE__, ec.value(), "std::filesystem::is_directory failed.");
-            } else {
+            if (errno == ENOENT) {
                 return false;
+            } else {
+                throw ARL::SystemError(__FILE__, __LINE__, errno, "stat failed.");
             }
         }
     }
 
     [[nodiscard]]
     std::string FsCurrentWorkingDirectory() {
-        std::error_code ec;
-        std::string path = std::filesystem::current_path(ec);
-        if (ec) {
-            throw ARL::SystemError(__FILE__, __LINE__, ec.value(), "std::filesystem::current_path failed.");
-        } else {
-            return path;
+        std::string path(256, '\x00');
+        while (getcwd(path.data(), path.size()) == 0) {
+            if (errno == ERANGE) {
+                path.resize(path.size() * 2);
+            } else {
+                throw ARL::SystemError(__FILE__, __LINE__, errno, "getcwd failed.");
+            }
         }
+
+        path.resize(strlen(path.data()));
+
+        return path;
     }
 }
 
