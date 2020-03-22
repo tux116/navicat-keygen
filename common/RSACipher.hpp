@@ -8,6 +8,9 @@
 #include "ResourceOwned.hpp"
 #include "ResourceTraitsOpenssl.hpp"
 
+#pragma comment(lib, "crypt32") // required by libcrypto.lib
+#pragma comment(lib, "ws2_32")  // required by libcrypto.lib
+
 #undef NKG_CURRENT_SOURCE_FILE
 #undef NKG_CURRENT_SOURCE_LINE
 #define NKG_CURRENT_SOURCE_FILE() TEXT(".\\common\\RSACipher.hpp")
@@ -103,11 +106,17 @@ namespace nkg {
 
         [[nodiscard]]
         size_t Bits() const {
+#if (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10000000     // openssl 1.0.x
             if (Get()->n == nullptr) {
                 throw Exception(NKG_CURRENT_SOURCE_FILE(), NKG_CURRENT_SOURCE_LINE(), TEXT("RSA modulus has not been set."));
             } else {
                 return BN_num_bits(Get()->n);
             }
+#elif (OPENSSL_VERSION_NUMBER & 0xffff0000) == 0x10100000     // openssl 1.1.x
+            return RSA_bits(Get());
+#else
+#error "RSACipher.hpp: unexpected OpenSSL version."
+#endif
         }
 
         void GenerateKey(int bits, unsigned int e = RSA_F4) {
