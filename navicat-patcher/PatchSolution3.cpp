@@ -183,7 +183,7 @@ namespace nkg {
                         0x55,               // push rbp
                         0x48, 0x89, 0xe5    // mov rbp, rsp
                     };
-                    for (int i = -0x90; i + static_cast<int>(sizeof(FunctionHeader)) < 0; ++i) {
+                    for (int i = -0x9A; i + static_cast<int>(sizeof(FunctionHeader)) < 0; ++i) {
                         if (memcmp(ARL::AddressOffset(lpXrefKeyword, i), FunctionHeader, sizeof(FunctionHeader)) == 0) {
                             lpfnGenerateKeyB = ARL::AddressOffset(lpXrefKeyword, i);
                         }
