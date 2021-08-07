@@ -1,0 +1,68 @@
+name: MSBuild
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .
+
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Install Library
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        vcpkg update
+        vcpkg install capstone[x86]:x64-windows-static
+        vcpkg install capstone[x86]:x86-windows-static
+        vcpkg install keystone:x64-windows-static
+        vcpkg install keystone:x86-windows-static
+        vcpkg install openssl-windows:x64-windows-static
+        vcpkg install openssl-windows:x86-windows-static
+        vcpkg install rapidjson:x64-windows-static
+        vcpkg install rapidjson:x86-windows-static
+        vcpkg update
+        vcpkg integrate install
+    
+    - name: nuget
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        nuget sources add -name vcpkg -source C:\vcpkg\scripts\buildsystems
+        nuget update -source vcpkg
+        nuget update -self
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+      
+    - name: package
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      shell: pwsh
+      run: |
+        cd bin/x64-Release
+        7z a navicat-keygen.zip navicat-keygen.exe navicat-patcher.exe
+    
+    - name: release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        files: bin/x64-Release/navicat-keygen.zip
+        prerelease: ${{ contains(github.ref, '-') }}

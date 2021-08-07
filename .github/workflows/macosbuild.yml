@@ -1,0 +1,41 @@
+name: macOSbuild
+
+on:
+  push:
+    branches: [ mac ]
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+
+    runs-on: macos-10.15
+
+    steps:
+    
+    - uses: actions/checkout@v2
+      with:
+        ref: mac
+    
+    - name: brew
+      run: |
+        brew install rapidjson capstone keystone libplist
+    
+    - name: build
+      run: |
+        ln -s /usr/local/lib/libplist-2.0.3.dylib /usr/local/lib/libplist.dylib
+        ln -s /usr/local/lib/libplist++-2.0.3.dylib /usr/local/lib/libplist++.dylib
+        make all
+        
+    - name: package
+      run: |
+        cd bin/
+        zip navicat-keygen-macos.zip navicat-keygen	navicat-patcher
+        
+    - name: release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        files: bin/navicat-keygen-macos.zip
+        prerelease: ${{ contains(github.ref, '-') }}
