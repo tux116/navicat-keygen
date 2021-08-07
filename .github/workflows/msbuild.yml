@@ -56,7 +56,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         cd bin/x64-Release
-        7za a -tzip navicat-keygen.zip navicat-keygen.exe navicat-patcher.exe
+        "C:\Program Files\7-Zip\7z.exe" a navicat-keygen.zip navicat-keygen.exe navicat-patcher.exe
     
     - name: release
       uses: softprops/action-gh-release@v1
