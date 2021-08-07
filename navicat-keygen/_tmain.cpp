@@ -24,7 +24,7 @@ namespace nkg {
 static void Welcome() {
     _putts(TEXT("***************************************************"));
     _putts(TEXT("*       Navicat Keygen by @DoubleLabyrinth        *"));
-    _putts(TEXT("*                   Version: 4.0                  *"));
+    _putts(TEXT("*                   Version: 4.2                  *"));
     _putts(TEXT("***************************************************"));
     _putts(TEXT(""));
 }
