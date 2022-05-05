@@ -35,6 +35,7 @@ jobs:
         git reset --hard f65d6947c7212618c00dcc99ecd53c47db97f8cd
         vcpkg install unicorn:x64-windows-static
         git pull
+        vcpkg install capstone[x86]:x64-windows-static
         vcpkg install fmt:x64-windows-static
         vcpkg install rapidjson:x64-windows-static
         vcpkg install keystone:x64-windows-static
