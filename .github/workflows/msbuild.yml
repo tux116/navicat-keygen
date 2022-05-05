@@ -24,18 +24,21 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1
 
-    - name: Install Library
-      working-directory: ${{env.GITHUB_WORKSPACE}}
+    - name: Install dependencies
+      shell: pwsh
       run: |
         vcpkg update
-        vcpkg install capstone[x86]:x64-windows-static
-        vcpkg install capstone[x86]:x86-windows-static
-        vcpkg install keystone:x64-windows-static
-        vcpkg install keystone:x86-windows-static
-        vcpkg install openssl-windows:x64-windows-static
-        vcpkg install openssl-windows:x86-windows-static
+        pushd .
+        cd ${env:VCPKG_INSTALLATION_ROOT}
+        git reset --hard 3b3bd424827a1f7f4813216f6b32b6c61e386b2e
+        vcpkg install openssl:x64-windows-static
+        git reset --hard f65d6947c7212618c00dcc99ecd53c47db97f8cd
+        vcpkg install unicorn:x64-windows-static
+        git pull
+        vcpkg install fmt:x64-windows-static
         vcpkg install rapidjson:x64-windows-static
-        vcpkg install rapidjson:x86-windows-static
+        vcpkg install keystone:x64-windows-static
+        popd
         vcpkg update
         vcpkg integrate install
     
@@ -50,7 +53,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}} /p:Platform=x64
       
     - name: package
       working-directory: ${{env.GITHUB_WORKSPACE}}
