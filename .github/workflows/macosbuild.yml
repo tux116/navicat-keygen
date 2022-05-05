@@ -29,12 +29,12 @@ jobs:
     - name: package
       run: |
         cd bin/
-        zip navicat-keygen-macos.zip navicat-keygen	navicat-patcher
+        zip navicat-keygen-macos-x64.zip navicat-keygen navicat-patcher
         
     - name: release
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: bin/navicat-keygen-macos.zip
+        files: bin/navicat-keygen-macos-x64.zip
         prerelease: ${{ contains(github.ref, '-') }}
