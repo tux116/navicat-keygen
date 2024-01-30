@@ -1,72 +1,84 @@
-name: MSBuild
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-env:
-  # Path to the solution file relative to the root of the project.
-  SOLUTION_FILE_PATH: .
-
-  # Configuration type to build.
-  # You can convert this to a build matrix if you need coverage of multiple configuration types.
-  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-  BUILD_CONFIGURATION: Release
+name: navicat-keygen builds
+on: workflow_dispatch
 
 jobs:
-  build:
+  navicat-keygen-x86:
     runs-on: windows-latest
-
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1
-
     - name: Install dependencies
       shell: pwsh
       run: |
-        vcpkg update
         pushd .
         cd ${env:VCPKG_INSTALLATION_ROOT}
-        git reset --hard 3b3bd424827a1f7f4813216f6b32b6c61e386b2e
-        vcpkg install openssl:x64-windows-static
-        git reset --hard f65d6947c7212618c00dcc99ecd53c47db97f8cd
-        vcpkg install unicorn:x64-windows-static
         git pull
-        vcpkg install capstone[x86]:x64-windows-static
+        vcpkg install openssl:x86-windows-static
+        vcpkg install unicorn:x86-windows-static
+        vcpkg install fmt:x86-windows-static
+        vcpkg install rapidjson:x86-windows-static
+        vcpkg install keystone:x86-windows-static
+        popd
+
+    - name: Clone source
+      uses: actions/checkout@v2
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Clone
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: |
+        git clone https://notabug.org/doublesine/navicat-keygen
+        cd navicat-keygen
+        git checkout windows
+
+    - name: Build project
+      run: |
+        vcpkg integrate install
+        msbuild navicat-keygen.sln /p:Configuration=Release /p:Platform=x86
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: navicat-keygen-x86.zip
+        path: bin/x86-Release/*.exe
+
+  navicat-keygen-x64:
+    runs-on: windows-latest
+    steps:
+    - name: Install dependencies
+      run: |
+        pushd .
+        cd ${env:VCPKG_INSTALLATION_ROOT}
+        git pull
+        vcpkg install openssl:x64-windows-static
+        vcpkg install unicorn:x64-windows-static
         vcpkg install fmt:x64-windows-static
         vcpkg install rapidjson:x64-windows-static
         vcpkg install keystone:x64-windows-static
         popd
-        vcpkg update
-        vcpkg integrate install
-    
-    - name: nuget
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-        nuget sources add -name vcpkg -source C:\vcpkg\scripts\buildsystems
-        nuget update -source vcpkg
-        nuget update -self
 
-    - name: Build
-      working-directory: ${{env.GITHUB_WORKSPACE}}
+    - name: Clone source
+      uses: actions/checkout@v2
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Clone
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}} /p:Platform=x64
-      
-    - name: package
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      shell: pwsh
       run: |
-        cd bin/x64-Release
-        7z a navicat-keygen-windows-x64.zip navicat-keygen.exe navicat-patcher.exe
-    
-    - name: release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        git clone https://notabug.org/doublesine/navicat-keygen
+        cd navicat-keygen
+        git checkout windows
+
+    - name: Build project
+      run: |
+        vcpkg integrate install
+        msbuild navicat-keygen.sln /p:Configuration=Release /p:Platform=x64
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
       with:
-        files: bin/x64-Release/navicat-keygen-windows-x64.zip
-        prerelease: ${{ contains(github.ref, '-') }}
+        name: navicat-keygen-x64.zip
+        path: bin/x64-Release/*.exe
